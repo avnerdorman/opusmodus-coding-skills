@@ -24,7 +24,7 @@ The primary function for generating block additive structures.
 **Signature:**
 
 ```lisp
-(gen-block-additive sequence &key (type 'linear) (flat nil) seed lengths pitches (start-count 1) (repeat-last 0))
+(gen-block-additive sequence &key (type 'linear) (flat nil) seed lengths pitches (start-count 1) (repeat-last 0) (step-repeat 1))
 ```
 
 **Arguments:**
@@ -40,9 +40,12 @@ The primary function for generating block additive structures.
   - `1`: Starts with 1 note (default).
   - `N`: Starts with N notes already revealed.
 - **repeat-last**: (integer) Number of times to repeat the final built measure. Default: 0.
+- **step-repeat**: (integer) Number of times to repeat each intermediate step. Default: 1.
 
 **Description:**
 Loops through the build process, generating a sequence of measures where the density of the pattern increases according to the chosen `type`.
+
+**Smart Skipping**: The function automatically detects if a step "unmasks" a rest. Such steps are skipped (accumulated internally) so that every measure in the output sequence adds a new _audible_ note. This prevents redundant repetitions where nothing changes visually or sonically.
 
 **Examples:**
 
@@ -161,12 +164,13 @@ _Basic Random Build:_
 (gen-block-additive '(s g4 mf - d4 e4 - g4 - d4 e4 - g4 -) :type 'random)
 ```
 
-_Advanced Setup (Start with 3 notes, Repeat Final 4 times):_
+\__Advanced Setup (Start with 3 notes, Repeat Final 4 times, Repeat Steps 2 times):_
 
 ```lisp
 (gen-block-additive '(s g4 mf - d4 e4 - g4 - d4 e4 - g4 -)
                     :start-count 3
                     :type 'random
+                    :step-repeat 2
                     :repeat-last 4)
 ```
 
