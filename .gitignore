@@ -1,0 +1,14 @@
+
+# Exclusion Rules
+.DS_Store
+*.pyc
+__pycache__/
+.idea/
+.vscode/
+*.log
+
+# Exclude all PDFs to keep the repo light
+*.pdf
+# Exclude the original Omdocset files as we have extracted what we need
+# Only keep our knowledge base and skills
+English.lproj/
