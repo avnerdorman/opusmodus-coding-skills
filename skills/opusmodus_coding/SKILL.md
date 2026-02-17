@@ -82,3 +82,18 @@ If you are unsure about an argument:
 1.  Do NOT guess.
 2.  Search for the function name in `knowledge/system_functions/`.
 3.  Read the Markdown file.
+
+## 6. Common Pitfalls
+
+### Handling Rests in OMN Lists
+When programmatically creating rests by negating lengths (e.g., `-1/8`), you **MUST** remove the associated pitch, velocity, and articulation data from that event.
+
+**Incorrect**:
+`'(e c4 -1/8 d4)` 
+*Result*: Opusmodus interprets `-1/8` as a rest, but then sees `d4` as the pitch for the *next* event (with a default length). This shifts the melody and ruins alignment.
+
+**Correct**:
+`'(e c4 -1/8)`
+*Result*: The rest replaces the event entirely.
+
+**Rule**: If length < 0, the event should be `(length)`, not `(length pitch vel...)`. Use `single-events` to iterate and strip data cleanly when making rests.
