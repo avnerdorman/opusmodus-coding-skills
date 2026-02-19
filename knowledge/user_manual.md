@@ -191,56 +191,56 @@ This section covers functions designed to manipulate patterns in time, creating 
 
 ### apply-phasing
 
-Creates a two-voice Steve Reich-style phasing structure from a bar-grouped OMN sequence.
+Creates a multi-voice Steve Reich-style phasing structure from a bar-grouped OMN sequence.
 
 **Signature:**
 
 ```lisp
-(apply-phasing sequence delta &key (step-repeat 1))
+(apply-phasing sequence delta &key (step-repeat 1) (voices 2))
 ```
 
 **Arguments:**
 
 - **sequence**: (list) Bar-grouped OMN input: `((bar1)(bar2)(bar3)...)`. Each sublist is one complete bar.
-- **delta**: (ratio) The phasing offset increment per bar (e.g., `1/16`, `1/8`, `1/4`).
-- **step-repeat**: (integer) How many bars share the same offset before it increments. Default: `1`.
-  - `1` = offset grows by `delta` every bar (fastest drift)
-  - `2` = offset grows by `delta` every 2 bars (slower drift)
-  - `N` = offset grows every N bars
+- **delta**: (ratio) The phasing offset increment (e.g., `1/16`, `1/8`, `1/4`).
+- **step-repeat**: (integer) Bars before the offset increments for Voice 2. Default: `1`. Each additional voice multiplies this by its voice index (see below).
+- **voices**: (integer) Total number of voices, including the original. Default: `2`.
 
 **Return value:**
 
 ```lisp
-(list voice-1 voice-2)
+(list voice-1 voice-2 ... voice-N)
 ```
 
 - **voice-1**: The original sequence, unchanged.
-- **voice-2**: The phased version — trimmed to the same total duration as voice-1 and re-barred to the same measure structure using `omn-to-time-signature`.
+- **voice-2..N**: Phased versions — each trimmed to the same total duration as voice-1 and re-barred to the same measure structure using `omn-to-time-signature`.
 
 **Description:**
 
-The offset prepended to bar `i` (0-based) is:
+The offset for voice `v` (1 = first phased voice) at bar `i` (0-based) is:
 
 ```
-offset = floor(i / step-repeat) * |delta|
+offset = floor(i / (step-repeat * v)) * |delta|
 ```
 
-So with `delta = 1/8` and `step-repeat = 1`:
+Each additional voice uses a larger effective step-repeat (`step-repeat * v`), so voices enter the drift at staggered rates. Voice 3 only starts accumulating offset once Voice 2 already has its first delay; Voice 4 starts later still.
 
-| Bar | Offset in Voice 2 |
-|-----|-------------------|
-| 1   | none (delta × 0)  |
-| 2   | `-1/8` rest       |
-| 3   | `-1/4` rest       |
-| 4   | `-3/8` rest       |
+Example with `delta = 1/8`, `step-repeat = 2`, `voices = 3`, 6 bars:
 
-Voice 2 is assembled as a flat sequence, trimmed to the total duration of Voice 1 with `length-span`, then re-barred with `omn-to-time-signature` to match the original bar lines exactly.
+| Bar | Voice 1 | Voice 2 (÷2) | Voice 3 (÷4) |
+|-----|---------|--------------|--------------|
+| 1   | 0       | 0            | 0            |
+| 2   | 0       | 0            | 0            |
+| 3   | 0       | `-d`         | 0            |
+| 4   | 0       | `-d`         | 0            |
+| 5   | 0       | `-2d`        | `-d`         |
+| 6   | 0       | `-2d`        | `-d`         |
 
 **Native Opusmodus functions used:** `get-time-signature`, `time-signature-length`, `length-span`, `omn-to-time-signature`.
 
 **Examples:**
 
-_Basic phasing, 1/8 delta:_
+_Two voices, basic phasing (original behaviour):_
 
 ```lisp
 (apply-phasing
@@ -251,31 +251,40 @@ _Basic phasing, 1/8 delta:_
   1/8)
 ```
 
-_Slower phasing, delta increments every 2 bars:_
+_Three voices, staggered drift at 2-bar intervals:_
 
 ```lisp
-(apply-phasing
-  '((q c4 d4 e4 f4)
-    (q g4 a4 b4 c5)
-    (q d5 e5 f5 g5)
-    (q a5 g5 f5 e5)
-    (q c5 b4 a4 g4)
-    (q f4 e4 d4 c4))
-  1/16
-  :step-repeat 2)
+(setf phased
+  (apply-phasing
+    '((q c4 d4 e4 f4)
+      (q g4 a4 b4 c5)
+      (q d5 e5 f5 g5)
+      (q a5 g5 f5 e5)
+      (q c5 b4 a4 g4)
+      (q f4 e4 d4 c4))
+    1/8
+    :step-repeat 2
+    :voices 3))
+
+;; Access voices:
+;; (first phased)  -> original
+;; (second phased) -> drifts from bar 3 onward
+;; (third phased)  -> drifts from bar 5 onward
 ```
 
-_Use in a two-voice score:_
+_Four-voice score:_
 
 ```lisp
-(setf phased (apply-phasing source-bars 1/16))
+(setf p (apply-phasing source 1/16 :step-repeat 1 :voices 4))
 
-(def-score phasing-example
-           (:title "Phasing Example"
+(def-score four-phase
+           (:title "Four-Voice Phase"
             :tempo 120
-            :time-signature (get-time-signature (first phased)))
-  (voice-1 :omn (first phased)  :channel 1)
-  (voice-2 :omn (second phased) :channel 2))
+            :time-signature (get-time-signature (first p)))
+  (v1 :omn (first  p) :channel 1)
+  (v2 :omn (second p) :channel 2)
+  (v3 :omn (third  p) :channel 3)
+  (v4 :omn (fourth p) :channel 4))
 ```
 
 _Combined with `gen-block-additive`:_
@@ -286,9 +295,7 @@ _Combined with `gen-block-additive`:_
                       :step-repeat 2
                       :repeat-last 2))
 
-(setf phased-built (apply-phasing built 1/16))
-;; (first phased-built)  -> original additive sequence
-;; (second phased-built) -> phase-shifted, trimmed, re-barred
+(setf phased-built (apply-phasing built 1/16 :voices 3))
 ```
 
 > **RTF documentation:** `knowledge/apply-phasing.rtf`

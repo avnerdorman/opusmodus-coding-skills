@@ -7,7 +7,7 @@
 \f0\fs20\cf3  \cf0
 \pard\pardeftab720\sl360\slmult1
 
-\f0\fs22\b apply-phasing\b0  \i sequence delta\i0  \b &key\b0  (step-repeat 1)
+\f0\fs22\b apply-phasing\b0  \i sequence delta\i0  \b &key\b0  (step-repeat 1) (voices 2)
 \f0\fs18 \cf3 [Function]\cf0
 \pard\pardeftab720\sl320\slmult1\sb200
 
@@ -16,148 +16,135 @@
 \pard\pardeftab720\sl300\slmult1\sb60
 {\f1\fs18 sequence}{\f0\fs20 \tab\tab  An OMN list grouped by bars: \f1\fs18 ((bar1)(bar2)(bar3)...)\f0\fs20 . Each sublist\par
 \tab\tab  is one complete bar of OMN notation.\par}
-{\f1\fs18 delta}{\f0\fs20 \tab\tab\tab  A duration ratio representing the phasing increment\par
+{\f1\fs18 delta}{\f0\fs20 \tab\tab\tab  A duration ratio for the phasing offset increment\par
 \tab\tab  (e.g.\f1\fs18  1/16\f0\fs20 , \f1\fs18 1/8\f0\fs20 , \f1\fs18 1/4\f0\fs20 ). Must be a positive ratio.\par}
-{\f1\fs18 step-repeat}{\f0\fs20 \tab  Integer. How many bars share the same offset before it\par
-\tab\tab  increments. Default: \f1\fs18 1\f0\fs20 .\par}
+{\f1\fs18 step-repeat}{\f0\fs20 \tab  Integer. Bars before the offset increments for \b Voice 2\b0 .\par
+\tab\tab  Each additional voice multiplies this by its voice index.\par
+\tab\tab  Default: \f1\fs18 1\f0\fs20 .\par}
+{\f1\fs18 voices}{\f0\fs20 \tab\tab\tab  Integer. Total number of voices, including the original.\par
+\tab\tab  Default: \f1\fs18 2\f0\fs20 .\par}
 \pard\pardeftab720\sl320\slmult1\sb300
 
 \f0\fs20\b\ul Description:\b0\ul0
 \par
 \pard\pardeftab720\sl300\slmult1\sb100
 \f0\fs20
-{\f0\fs20 The \b apply-phasing\b0  function creates a two-voice Steve Reich-style phasing structure from a bar-grouped OMN sequence.}\par
+{\f0\fs20 The \b apply-phasing\b0  function creates a multi-voice Steve Reich-style phasing structure from a bar-grouped OMN sequence.}\par
 \par
 {\f0\fs20 \b Voice 1\b0  is the original sequence, completely unchanged.}\par
 \par
-{\f0\fs20 \b Voice 2\b0  introduces a progressively larger rest offset at the start of each bar, creating an ever-widening phase shift. The offset added to bar \i i\i0  (0-based) is:}\par
+{\f0\fs20 Each subsequent voice introduces a progressively larger rest at the start of each bar. The key to multi-voice behaviour is that each voice \i v\i0  (1-based, so Voice 2 = v=1) uses an \b effective step-repeat of (step-repeat \uc0\u215  v)\b0 . This staggers when each voice begins to drift:}\par
 \par
-\pard\pardeftab720\sl300\slmult1\sb60\li720
-\f1\fs18 offset = floor(i / step-repeat) * |delta|\par
+\pard\pardeftab720\sl300\slmult1\sb60\li360
+\f1\fs18
+offset(v, i) = floor(i / (step-repeat * v)) * |delta|\par
 \pard\pardeftab720\sl300\slmult1\sb100
 \f0\fs20
 \par
-{\f0\fs20 Voice 2 is then \b trimmed\b0  to exactly the same total duration as Voice 1, and \b re-barred\b0  to match the original measure structure using \f1\fs18 omn-to-time-signature\f0\fs20 .}\par
+{\f0\fs20 So Voice 3 only starts accumulating offset once Voice 2 already has its first delay; Voice 4 starts later still, and so on.}\par
 \par
-\pard\pardeftab720\sl300\slmult1\sb100
-\f0\fs20 The table below shows the offset per bar with \f1\fs18 delta = 1/8\f0\fs20 , \f1\fs18 step-repeat = 1\f0\fs20 :\par
+All phased voices are trimmed to the same total duration as Voice 1 using \f1\fs18 length-span\f0\fs20 , then re-barred with \f1\fs18 omn-to-time-signature\f0\fs20  to match the original bar structure exactly.\par
+\pard\pardeftab720\sl300\slmult1\sb200
+
+\f0\fs20\b Example offset table\b0  \'96 \f1\fs18 delta=1/8\f0\fs20 , \f1\fs18 step-repeat=2\f0\fs20 , \f1\fs18 voices=3\f0\fs20 , 6 bars:\par
 \par
 \pard\pardeftab720\sl300\slmult1\sb60\li720
 \f1\fs18
-Bar 1   ->  no rest  (delta x 0)\par
-Bar 2   ->  -1/8     (delta x 1)\par
-Bar 3   ->  -1/4     (delta x 2)\par
-Bar 4   ->  -3/8     (delta x 3)\par
-...\par
-\pard\pardeftab720\sl300\slmult1\sb100
-\f0\fs20\par
-
-With \f1\fs18 step-repeat = 2\f0\fs20 , bars 1\'962 share offset 0, bars 3\'964 share offset 1, bars 5\'966 share offset 2, and so on.
-\par\par
+Bar    V1    V2 (\'f72)    V3 (\'f74)\par
+ 1      0       0          0\par
+ 2      0       0          0\par
+ 3      0      -d          0\par
+ 4      0      -d          0\par
+ 5      0     -2d         -d\par
+ 6      0     -2d         -d\par
+\pard\pardeftab720\sl300\slmult1\sb200
+\f0\fs20
 {\f0\fs20 \b Native Opusmodus functions used:\b0}\par
 \pard\pardeftab720\sl300\slmult1\sb60\li360
 \f0\fs20
 \f1\fs18 get-time-signature\f0\fs20 \tab  Extracts the bar structure from the input sequence.\par
 \f1\fs18 time-signature-length\f0\fs20 \tab  Computes the total duration (\f1\fs18 :sum t\f0\fs20 ).\par
-\f1\fs18 length-span\f0\fs20 \tab\tab  Trims the phased flat sequence to the exact total duration.\par
-\f1\fs18 omn-to-time-signature\f0\fs20 \tab  Re-bars the flat sequence to the original measure structure.\par
+\f1\fs18 length-span\f0\fs20 \tab\tab  Trims each phased voice to the exact total duration.\par
+\f1\fs18 omn-to-time-signature\f0\fs20 \tab  Re-bars each voice to the original measure structure.\par
 \pard\pardeftab720\sl320\slmult1\sb300
 
 \f0\fs20\b\ul Examples:\b0\ul0
 \par
 \pard\pardeftab720\sl300\slmult1\sb100
 
-\f0\fs20\b Example 1 \b0 \'96 Basic phasing, \f1\fs18 1/8\f0\fs20  delta, four bars of 4/4:\par
+\f0\fs20\b Example 1 \b0 \'96 Two voices, basic phasing (original behaviour):\par
 \pard\pardeftab720\sl300\slmult1\sb60\li360
 \f1\fs18
-(setf seq \'92((q c4 d4 e4 f4)\par
-             (q g4 a4 b4 c5)\par
-             (q d5 e5 f5 g5)\par
-             (q a5 g5 f5 e5)))\par
-\par
-(apply-phasing seq 1/8)\par
-\par
-;; Voice 1 (original):\par
-;; ((q c4 d4 e4 f4)\par
-;;  (q g4 a4 b4 c5)\par
-;;  (q d5 e5 f5 g5)\par
-;;  (q a5 g5 f5 e5))\par
-\par
-;; Voice 2 (phased, trimmed, re-barred):\par
-;; Bar 1: no rest     -> (q c4 d4 e4 f4)\par
-;; Bar 2: -1/8 offset -> (-1/8 q g4 a4 b4 ...)\par
-;; Bar 3: -1/4 offset -> (-1/4 q d5 e5 f5 ...)\par
-;; Bar 4: -3/8 offset -> (-3/8 q a5 g5 f5 ...)\par
+(apply-phasing\par
+  \'92((q c4 d4 e4 f4)\par
+    (q g4 a4 b4 c5)\par
+    (q d5 e5 f5 g5)\par
+    (q a5 g5 f5 e5))\par
+  1/8)\par
 \pard\pardeftab720\sl300\slmult1\sb200
 
-\f0\fs20\b Example 2 \b0 \'96 Slower phasing, \f1\fs18 1/16\f0\fs20  delta, offset increments every 2 bars:\par
+\f0\fs20\b Example 2 \b0 \'96 Three voices, staggered at 2-bar intervals:\par
 \pard\pardeftab720\sl300\slmult1\sb60\li360
 \f1\fs18
-(setf seq2 \'92((q c4 d4 e4 f4)\par
-              (q g4 a4 b4 c5)\par
-              (q d5 e5 f5 g5)\par
-              (q a5 g5 f5 e5)\par
-              (q c5 b4 a4 g4)\par
-              (q f4 e4 d4 c4)))\par
+(setf phased\par
+  (apply-phasing\par
+    \'92((q c4 d4 e4 f4)\par
+      (q g4 a4 b4 c5)\par
+      (q d5 e5 f5 g5)\par
+      (q a5 g5 f5 e5)\par
+      (q c5 b4 a4 g4)\par
+      (q f4 e4 d4 c4))\par
+    1/8\par
+    :step-repeat 2\par
+    :voices 3))\par
 \par
-(apply-phasing seq2 1/16 :step-repeat 2)\par
-\par
-;; Bars 1-2: no offset   (delta x 0)\par
-;; Bars 3-4: -1/16 rest  (delta x 1)\par
-;; Bars 5-6: -1/8  rest  (delta x 2)\par
+;; (first  phased)  -> original\par
+;; (second phased)  -> drifts from bar 3 onward\par
+;; (third  phased)  -> drifts from bar 5 onward\par
 \pard\pardeftab720\sl300\slmult1\sb200
 
-\f0\fs20\b Example 3 \b0 \'96 Deploying in a two-voice score:\par
+\f0\fs20\b Example 3 \b0 \'96 Four-voice score:\par
 \pard\pardeftab720\sl300\slmult1\sb60\li360
 \f1\fs18
-(setf source \'92((e c4 mf d4 e4 f4 g4 a4 b4 c5)\par
-               (e d5 mf e5 f5 g5 a5 g5 f5 e5)\par
-               (e d5 mf c5 b4 a4 g4 f4 e4 d4)\par
-               (e c4 mf d4 e4 f4 g4 a4 b4 c5)))\par
+(setf p (apply-phasing source 1/16 :step-repeat 1 :voices 4))\par
 \par
-(setf phased (apply-phasing source 1/16 :step-repeat 1))\par
-\par
-(def-score phasing-example\par
-           (:title         "Phasing Example"\par
-            :composer      "Reich / OpusModus"\par
+(def-score four-phase\par
+           (:title         "Four-Voice Phase"\par
             :tempo         120\par
-            :time-signature (get-time-signature (first phased)))\par
-\par
-  (voice-1\par
-    :omn (first phased)\par
-    :channel 1)\par
-\par
-  (voice-2\par
-    :omn (second phased)\par
-    :channel 2))\par
+            :time-signature (get-time-signature (first p)))\par
+  (v1 :omn (first  p) :channel 1)\par
+  (v2 :omn (second p) :channel 2)\par
+  (v3 :omn (third  p) :channel 3)\par
+  (v4 :omn (fourth p) :channel 4))\par
 \pard\pardeftab720\sl300\slmult1\sb200
 
-\f0\fs20\b Example 4 \b0 \'96 Combined with \f1\fs18 gen-block-additive\f0\fs20  output:\par
+\f0\fs20\b Example 4 \b0 \'96 Combined with \f1\fs18 gen-block-additive\f0\fs20 :\par
 \pard\pardeftab720\sl300\slmult1\sb60\li360
 \f1\fs18
-;; Build a 6-step additive sequence, then phase it\par
 (setf built\par
   (gen-block-additive \'92(e c4 d4 e4 f4 g4 a4)\par
                       :step-repeat 2\par
                       :repeat-last 2))\par
 \par
-;; Phase the built sequence with a 1/16 delta\par
-(setf phased-built (apply-phasing built 1/16))\par
+(setf phased-built (apply-phasing built 1/16 :voices 3))\par
 \par
-;; (first phased-built)  -> original additive sequence\par
+;; (first  phased-built) -> original additive sequence\par
 ;; (second phased-built) -> phase-shifted, trimmed, re-barred\par
+;; (third  phased-built) -> drifts at half the rate of voice 2\par
 \pard\pardeftab720\sl320\slmult1\sb300
 
 \f0\fs20\b\ul Return Value:\b0\ul0
 \par
 \pard\pardeftab720\sl300\slmult1\sb100
 \f0\fs20
-A list of two bar-grouped OMN voices:\par
+A list of \i voices\i0  bar-grouped OMN sequences:\par
 \par
 \pard\pardeftab720\sl300\slmult1\sb60\li360
 \f1\fs18
-(list voice-1 voice-2)\par
+(list voice-1 voice-2 ... voice-N)\par
 \pard\pardeftab720\sl300\slmult1\sb100
 \f0\fs20\par
-Where \f1\fs18 voice-1\f0\fs20  is the original sequence and \f1\fs18 voice-2\f0\fs20  is the phased, trimmed, re-barred version. Both are nested lists grouped by bar, ready for use in \f1\fs18 def-score\f0\fs20 .\par
+\f1\fs18 voice-1\f0\fs20  is the original sequence. \f1\fs18 voice-2\f0\fs20  through \f1\fs18 voice-N\f0\fs20  are phased,\par
+trimmed, and re-barred. All voices are nested lists grouped by bar,\par
+ready for direct use in \f1\fs18 def-score\f0\fs20 .\par
 }
