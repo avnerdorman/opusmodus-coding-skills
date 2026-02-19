@@ -143,12 +143,15 @@ Recreate the vibe of Clapping Music by building up a 12-beat pattern randomly.
 
 Use a symmetric build for a piano pattern, then repeat the full pattern.
 
-````lisp
+```lisp
 (setf piano-pattern '(s e4 fs4 b4 cs5 d5 fs4 e4 cs5 b4 fs4 d5 cs5))
 (gen-block-additive piano-pattern
                     :type 'symmetric
-;;; 3. Algorithmic Input (Euclidean Rhythm)
-)
+                    :start-count 0)
+```
+
+### 3. Algorithmic Input (Euclidean Rhythm)
+
 Generate a 12/16 pattern with 7 hits (Euclidean distribution) and build it up randomly.
 
 ```lisp
@@ -156,7 +159,7 @@ Generate a 12/16 pattern with 7 hits (Euclidean distribution) and build it up ra
                      :length (binary-map (gen-binary-euclidean 1 12 7 7) 's)
                      :pitch '(g4 d4 e4 g4 d4 e4 g4))
                     :type 'random)
-````
+```
 
 ### 4. Explicit Rest Handling
 
@@ -168,7 +171,7 @@ _Basic Random Build:_
 (gen-block-additive '(s g4 mf - d4 e4 - g4 - d4 e4 - g4 -) :type 'random)
 ```
 
-\__Advanced Setup (Start with 3 notes, Repeat Final 4 times, Repeat Steps 2 times):_
+_Advanced Setup (Start with 3 notes, Repeat Final 4 times, Repeat Steps 2 times):_
 
 ```lisp
 (gen-block-additive '(s g4 mf - d4 e4 - g4 - d4 e4 - g4 -)
@@ -178,14 +181,11 @@ _Basic Random Build:_
                     :repeat-last 4)
 ```
 
-````
-
-
 ---
 
 ## 2. Phasing and Pattern Generation
 
-This section covers functions designed to manipulate patterns in time, creating phasing effects (like Steve Reich's *Piano Phase* or *Clapping Music*) and canons.
+This section covers functions designed to manipulate patterns in time, creating phasing effects (like Steve Reich's _Piano Phase_ or _Clapping Music_) and canons.
 
 ### gen-phasing
 
@@ -195,7 +195,7 @@ The primary function for applying phasing or canon processes to a musical sequen
 
 ```lisp
 (gen-phasing sequence &key (method 'canon) (delay 1/8) (shift 1) (cycles 1) (repetition 1) (voices 2) (merge t))
-````
+```
 
 **Arguments:**
 
