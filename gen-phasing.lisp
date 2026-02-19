@@ -21,7 +21,7 @@
     list: A list of lists (voices) or a flat OMN list."
 
    (let* ((base-seq (if (> repetition 1)
-                       (gen-loop repetition sequence)
+                       (flatten (loop repeat repetition collect sequence))
                        sequence))
          (voice-list
           (case method
@@ -64,9 +64,36 @@
                                   
                                   ;; Apply rotation. 'gen-rotate' handles OMN structure.
                                    ;; Negative shift rotates to the left (standard phasing).
-                                  (gen-rotate (* -1 rot-amount) block)))))))))))
+                                  (gen-rotate (* -1 rot-amount) block))))))))
+
+            ((:rotation-time 'rotation-time)
+             (loop for v from 0 below voices
+                   collect
+                   (if (= v 0)
+                       base-seq
+                       (let* ((block (if (listp (first sequence)) (flatten sequence) sequence))
+                              ;; 1. Find the smallest duration in the sequence to use as the grid (e.g., 1/16)
+                              (durations (mapcar #'abs (flatten (omn :length block))))
+                              (grid-val (apply #'min durations))
+                              
+                              ;; 2. Calculate how many grid steps the 'delay' represents (e.g., 1/8 delay / 1/16 grid = 2 steps)
+                              ;; If delay is not a number, default to 1 step.
+                              (steps (if (numberp delay) (round (/ (abs delay) grid-val)) 1))
+                              
+                              ;; 3. Quantize the block to this grid (e.g., e -> s -s)
+                              (quantized-block (length-to-grid block grid-val))) 
+                         
+                         (flatten
+                          (loop for r from 0 below repetition
+                                collect
+                                (let* ((cycle-group (floor r cycles))
+                                       ;; Multiply shift by steps to rotate by the desired time amount
+                                       (rot-amount (* cycle-group shift steps v))) 
+                                  
+                                  ;; Rotate the QUANTIZED block
+                                  (gen-rotate (* -1 rot-amount) quantized-block))))))))))) ;; Close case, voice-list binding, let* vars
 
      ;; Formatting the Output
      (if merge
          voice-list
-         (flatten voice-list))))
+         (flatten voice-list)))) ;; Close let* body, defun

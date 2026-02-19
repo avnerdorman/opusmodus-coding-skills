@@ -9,6 +9,10 @@ This manual documents custom functions and extensions developed for the Opusmodu
     - [gen-additive-indices](#gen-additive-indices)
     - [apply-process-mask](#apply-process-mask)
 
+2.  [Phasing and Pattern Generation](#phasing-and-pattern-generation)
+    - [gen-phasing](#gen-phasing)
+    - [length-to-grid](#length-to-grid)
+
 ---
 
 ## 1. Block Additive Process
@@ -174,6 +178,88 @@ _Basic Random Build:_
                     :repeat-last 4)
 ```
 
+````
+
+
+---
+
+## 2. Phasing and Pattern Generation
+
+This section covers functions designed to manipulate patterns in time, creating phasing effects (like Steve Reich's *Piano Phase* or *Clapping Music*) and canons.
+
+### gen-phasing
+
+The primary function for applying phasing or canon processes to a musical sequence.
+
+**Signature:**
+
+```lisp
+(gen-phasing sequence &key (method 'canon) (delay 1/8) (shift 1) (cycles 1) (repetition 1) (voices 2) (merge t))
+````
+
+**Arguments:**
+
+- **sequence**: (list) Input OMN sequence.
+- **method**: (symbol) The technique to apply.
+  - `'canon`: Voices enter after a fixed delay.
+  - `'rotation`: Voices play a loop, shifting indices (_Clapping Music_ style).
+  - `'rotation-time`: Same as rotation, but shifts by time units instead of indices (uses `delay` as the shift amount).
+- **delay**: (length/int)
+  - For `'canon`: The time delay (e.g., 1/8) or number of events.
+  - For `'rotation-time`: The amount of time to shift per phase step (e.g., 1/8).
+- **shift**: (integer) For `'rotation` and `'rotation-time`. The number of steps (indices or time-units) to rotate the pattern each cycle. Default: 1.
+- **cycles**: (integer) For `'rotation`. How many times to repeat the pattern before shifting. Default: 1.
+- **repetition**: (integer) Total number of times to repeat the base sequence. Default: 1.
+- **voices**: (integer) Total number of voices to generate. Default: 2.
+- **merge**: (boolean) If `T`, returns a list of voices (polyphonic structure). If `nil`, returns a flat list. Default: `T`.
+
+**Description:**
+
+Generates multiple voices from a single sequence, applying either a simple time delay (canon) or a progressive phase shift (rotation).
+
+- **Canon**: Simply delays subsequent voices.
+- **Rotation**: Shifts the pattern cyclically. For `rotation-time`, the function intelligently detects the smallest duration in your sequence (the "grid") and calculates how many grid steps are needed to achieve the desired `delay` shift. This allows you to phase by 1/8th notes even if your pattern contains 16th notes.
+
+**Examples:**
+
+_Clapping Music Style (Index Rotation - shifting by 1 note):_
+
+```lisp
+(gen-phasing '(q c4 d4 e4 f4) :method :rotation :shift 1 :cycles 4 :repetition 12)
 ```
 
+_Time-Based Phasing (Shifting by 1/8th note):_
+
+```lisp
+;; Sequence has 1/16 notes, but we shift by 1/8
+(gen-phasing '(s c4 d4 e4 f4) :method :rotation-time :delay 1/8 :shift 1 :cycles 4 :repetition 12)
+```
+
+---
+
+### length-to-grid
+
+A helper function that quantizes a sequence to a rhythmic grid.
+
+**Signature:**
+
+```lisp
+(length-to-grid sequence grid-val)
+```
+
+**Arguments:**
+
+- **sequence**: (list) Input OMN sequence.
+- **grid-val**: (length) The target grid size (e.g., 1/16).
+
+**Description:**
+
+Converts a sequence of notes into a grid based on `grid-val`. All notes are quantized to the nearest multiple of `grid-val` and longer notes are split into a sequence of `note -rest -rest...`. This prepares a sequence for rhythmic rotation (phasing) where every unit of time is an accessible "slot".
+
+**Example:**
+
+```lisp
+;; Convert 1/8 note to 1/16 grid (becomes s -s)
+(length-to-grid '(e c4) 1/16)
+;; Result: ((s c4 -s))
 ```
