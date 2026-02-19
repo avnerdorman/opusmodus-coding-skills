@@ -10,6 +10,8 @@ This manual documents custom functions and extensions developed for the Opusmodu
     - [apply-process-mask](#apply-process-mask)
 
 2.  [Phasing and Pattern Generation](#phasing-and-pattern-generation)
+    - [apply-phasing](#apply-phasing)
+    - [apply-negative-phasing](#apply-negative-phasing)
     - [gen-phasing](#gen-phasing)
     - [length-to-grid](#length-to-grid)
 
@@ -186,6 +188,231 @@ _Advanced Setup (Start with 3 notes, Repeat Final 4 times, Repeat Steps 2 times)
 ## 2. Phasing and Pattern Generation
 
 This section covers functions designed to manipulate patterns in time, creating phasing effects (like Steve Reich's _Piano Phase_ or _Clapping Music_) and canons.
+
+### apply-phasing
+
+Creates a two-voice Steve Reich-style phasing structure from a bar-grouped OMN sequence.
+
+**Signature:**
+
+```lisp
+(apply-phasing sequence delta &key (step-repeat 1))
+```
+
+**Arguments:**
+
+- **sequence**: (list) Bar-grouped OMN input: `((bar1)(bar2)(bar3)...)`. Each sublist is one complete bar.
+- **delta**: (ratio) The phasing offset increment per bar (e.g., `1/16`, `1/8`, `1/4`).
+- **step-repeat**: (integer) How many bars share the same offset before it increments. Default: `1`.
+  - `1` = offset grows by `delta` every bar (fastest drift)
+  - `2` = offset grows by `delta` every 2 bars (slower drift)
+  - `N` = offset grows every N bars
+
+**Return value:**
+
+```lisp
+(list voice-1 voice-2)
+```
+
+- **voice-1**: The original sequence, unchanged.
+- **voice-2**: The phased version — trimmed to the same total duration as voice-1 and re-barred to the same measure structure using `omn-to-time-signature`.
+
+**Description:**
+
+The offset prepended to bar `i` (0-based) is:
+
+```
+offset = floor(i / step-repeat) * |delta|
+```
+
+So with `delta = 1/8` and `step-repeat = 1`:
+
+| Bar | Offset in Voice 2 |
+|-----|-------------------|
+| 1   | none (delta × 0)  |
+| 2   | `-1/8` rest       |
+| 3   | `-1/4` rest       |
+| 4   | `-3/8` rest       |
+
+Voice 2 is assembled as a flat sequence, trimmed to the total duration of Voice 1 with `length-span`, then re-barred with `omn-to-time-signature` to match the original bar lines exactly.
+
+**Native Opusmodus functions used:** `get-time-signature`, `time-signature-length`, `length-span`, `omn-to-time-signature`.
+
+**Examples:**
+
+_Basic phasing, 1/8 delta:_
+
+```lisp
+(apply-phasing
+  '((q c4 d4 e4 f4)
+    (q g4 a4 b4 c5)
+    (q d5 e5 f5 g5)
+    (q a5 g5 f5 e5))
+  1/8)
+```
+
+_Slower phasing, delta increments every 2 bars:_
+
+```lisp
+(apply-phasing
+  '((q c4 d4 e4 f4)
+    (q g4 a4 b4 c5)
+    (q d5 e5 f5 g5)
+    (q a5 g5 f5 e5)
+    (q c5 b4 a4 g4)
+    (q f4 e4 d4 c4))
+  1/16
+  :step-repeat 2)
+```
+
+_Use in a two-voice score:_
+
+```lisp
+(setf phased (apply-phasing source-bars 1/16))
+
+(def-score phasing-example
+           (:title "Phasing Example"
+            :tempo 120
+            :time-signature (get-time-signature (first phased)))
+  (voice-1 :omn (first phased)  :channel 1)
+  (voice-2 :omn (second phased) :channel 2))
+```
+
+_Combined with `gen-block-additive`:_
+
+```lisp
+(setf built
+  (gen-block-additive '(e c4 d4 e4 f4 g4 a4)
+                      :step-repeat 2
+                      :repeat-last 2))
+
+(setf phased-built (apply-phasing built 1/16))
+;; (first phased-built)  -> original additive sequence
+;; (second phased-built) -> phase-shifted, trimmed, re-barred
+```
+
+> **RTF documentation:** `knowledge/apply-phasing.rtf`
+
+---
+
+### apply-negative-phasing
+
+Creates a two-voice negative phasing structure from a bar-grouped OMN sequence using grid quantization and cyclic rotation. This is the rotation-based counterpart to `apply-phasing`.
+
+**Signature:**
+
+```lisp
+(apply-negative-phasing sequence delta &key (step-repeat 1))
+```
+
+**Arguments:**
+
+- **sequence**: (list) Bar-grouped OMN input: `((bar1)(bar2)(bar3)...)`.
+- **delta**: (ratio) Defines both the quantization grid and the phase step size (e.g., `1/16`, `1/8`, `1/4`).
+- **step-repeat**: (integer) How many bars share the same rotation before it increments. Default: `1`.
+
+**Return value:**
+
+```lisp
+(list voice-1 voice-2)
+```
+
+- **voice-1**: The original sequence, unchanged.
+- **voice-2**: Grid-quantized and left-rotated version, re-barred to the original measure structure.
+
+**Description:**
+
+Instead of prepending silence (as `apply-phasing` does), this function uses a grid rotation approach to shift each bar's content progressively earlier:
+
+1. Each bar is quantized to the delta grid with `length-to-grid`. Every event in the result is exactly `delta` in duration: notes longer than delta become a delta-sized attack followed by delta-sized rests.
+2. The quantized bar is left-rotated by `n` events via `gen-rotate`, where `n = floor(bar-index / step-repeat)`. One left-rotation step = advancing content by exactly `delta`.
+3. Content that wraps off the start reappears at the bar end — **total bar duration is always preserved, no trimming needed**.
+
+| Bar | Rotation in Voice 2 |
+|-----|---------------------|
+| 1   | 0 (unchanged)       |
+| 2   | rotate left 1 delta |
+| 3   | rotate left 2 delta |
+| 4   | rotate left 3 delta |
+
+**Note on quantization:** All bars in Voice 2 are quantized to the delta grid, so Voice 2 will sound more staccato/percussive than Voice 1 when `delta < note-duration`. Results are cleanest when note durations are exact multiples of delta.
+
+| Notes + delta         | Result |
+|-----------------------|--------|
+| all 1/16 + delta 1/16 | Each rotation removes one note cleanly |
+| all 1/4 + delta 1/4   | Each rotation removes one quarter note cleanly |
+| all 1/4 + delta 1/8   | Each note becomes attack + rest; rotation shifts through those |
+| Mixed + any delta     | Works for MIDI; notation may be approximate |
+
+**Native functions used:** `length-to-grid` (repo), `gen-rotate`, `get-time-signature`, `omn-to-time-signature`.
+
+**Contrast with `apply-phasing`:**
+
+| Function | Mechanism | Effect |
+|----------|-----------|--------|
+| `apply-phasing` | Prepend rest, trim end | Content shifts _later_, end is cut |
+| `apply-negative-phasing` | Left-rotate on grid | Content shifts _earlier_, start wraps to end |
+
+**Examples:**
+
+_Cleanest case — all notes already at the delta grid:_
+
+```lisp
+(apply-negative-phasing
+  '((s c4 d4 e4 f4 g4 a4 b4 c5)
+    (s d5 e5 f5 g5 a5 g5 f5 e5)
+    (s d5 c5 b4 a4 g4 f4 e4 d4)
+    (s c4 d4 e4 f4 g4 a4 b4 c5))
+  1/16)
+;; Bar 2: (s d4 e4 f4 g4 a4 b4 c5 c4)  — c4 wraps to end
+;; Bar 3: (s e4 f4 g4 a4 b4 c5 c4 d4)  — c4 d4 wrap to end
+```
+
+_Quarter-note bars, delta = 1/4:_
+
+```lisp
+(apply-negative-phasing
+  '((q c4 d4 e4 f4)
+    (q g4 a4 b4 c5)
+    (q d5 e5 f5 g5)
+    (q a5 g5 f5 e5))
+  1/4)
+```
+
+_Slower phasing — delta increments every 2 bars:_
+
+```lisp
+(apply-negative-phasing
+  '((s c4 d4 e4 f4 g4 a4 b4 c5)
+    (s d5 e5 f5 g5 a5 g5 f5 e5)
+    (s d5 c5 b4 a4 g4 f4 e4 d4)
+    (s c4 d4 e4 f4 g4 a4 b4 c5))
+  1/16
+  :step-repeat 2)
+```
+
+_Combined with `apply-phasing` for a converging/diverging three-voice texture:_
+
+```lisp
+(setf source '((s c4 d4 e4 f4 g4 a4 b4 c5)
+               (s d5 e5 f5 g5 a5 g5 f5 e5)
+               (s d5 c5 b4 a4 g4 f4 e4 d4)
+               (s c4 d4 e4 f4 g4 a4 b4 c5)))
+
+(setf pos (apply-phasing          source 1/16))  ; content drifts later
+(setf neg (apply-negative-phasing source 1/16))  ; content drifts earlier
+
+(def-score converge-diverge
+           (:title "Converging Phases" :tempo 120
+            :time-signature (get-time-signature source))
+  (original :omn source        :channel 1)
+  (later    :omn (second pos)  :channel 2)
+  (earlier  :omn (second neg)  :channel 3))
+```
+
+> **RTF documentation:** `knowledge/apply-negative-phasing.rtf`
+
+---
 
 ### gen-phasing
 

@@ -1,0 +1,192 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2639
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fmodern\fcharset0 Courier;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue128;\red50\green50\blue50;\red0\green100\blue0;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww14000\viewh18000\viewkind0
+
+\f0\fs28\b\cf2 apply-negative-phasing\cf0\b0
+\f0\fs20\cf3  \cf0
+\pard\pardeftab720\sl360\slmult1
+
+\f0\fs22\b apply-negative-phasing\b0  \i sequence delta\i0  \b &key\b0  (step-repeat 1)
+\f0\fs18 \cf3 [Function]\cf0
+\pard\pardeftab720\sl320\slmult1\sb200
+
+\f0\fs20\b\ul Arguments and Values:\b0\ul0
+\par
+\pard\pardeftab720\sl300\slmult1\sb60
+{\f1\fs18 sequence}{\f0\fs20 \tab\tab  An OMN list grouped by bars: \f1\fs18 ((bar1)(bar2)(bar3)...)\f0\fs20 . Each sublist\par
+\tab\tab  is one complete bar of OMN notation.\par}
+{\f1\fs18 delta}{\f0\fs20 \tab\tab\tab  A duration ratio that defines both the quantization grid and\par
+\tab\tab  the phase offset per step (e.g.\f1\fs18  1/16\f0\fs20 , \f1\fs18 1/8\f0\fs20 , \f1\fs18 1/4\f0\fs20 ).\par}
+{\f1\fs18 step-repeat}{\f0\fs20 \tab  Integer. How many bars share the same rotation before it\par
+\tab\tab  increments. Default: \f1\fs18 1\f0\fs20 .\par}
+\pard\pardeftab720\sl320\slmult1\sb300
+
+\f0\fs20\b\ul Description:\b0\ul0
+\par
+\pard\pardeftab720\sl300\slmult1\sb100
+\f0\fs20
+{\f0\fs20 The \b apply-negative-phasing\b0  function creates a two-voice negative phasing structure from a bar-grouped OMN sequence. It is the rotation-based counterpart to \b apply-phasing\b0 .}\par
+\par
+{\f0\fs20 \b Voice 1\b0  is the original sequence, completely unchanged.}\par
+\par
+{\f0\fs20 \b Voice 2\b0  advances the content of each bar progressively \i earlier\i0  by rotating it left on a \b delta-quantized grid\b0 . Content that \'93falls off\'94 the start of the bar wraps to the bar end, so total duration is always preserved \'97 no trimming or padding is needed.}\par
+\par
+{\f0\fs20 \b How it works:\b0}\par
+\par
+\pard\pardeftab720\sl300\slmult1\sb60\li360
+\f0\fs20
+1.  Each bar is quantized to the delta grid using \f1\fs18 length-to-grid\f0\fs20 .\par
+    Notes longer than delta become a delta-sized attack followed by rests.\par
+    Every event in the result is exactly delta in duration.\par
+\par
+2.  The quantized bar is left-rotated by \i n\i0  events using \f1\fs18 gen-rotate\f0\fs20 ,\par
+    where \i n = floor(bar-index / step-repeat)\i0 .\par
+    One left-rotation event = advancing the content by exactly one delta.\par
+\par
+3.  All bars are concatenated and re-barred with \f1\fs18 omn-to-time-signature\f0\fs20\par
+    to restore the original measure structure.\par
+\pard\pardeftab720\sl300\slmult1\sb200
+\f0\fs20
+
+{\f0\fs20 The rotation amounts per bar with \f1\fs18 step-repeat = 1\f0\fs20 :}\par
+\par
+\pard\pardeftab720\sl300\slmult1\sb60\li720
+\f1\fs18
+Bar 1   ->  rotate 0    (unchanged)\par
+Bar 2   ->  rotate left 1 delta   (content starts 1 delta earlier)\par
+Bar 3   ->  rotate left 2 delta   (content starts 2 delta earlier)\par
+Bar 4   ->  rotate left 3 delta\par
+...\par
+\pard\pardeftab720\sl300\slmult1\sb200
+\f0\fs20
+
+This mirrors the \f1\fs18 :rotation-time\f0\fs20  method of \f1\fs18 gen-phasing\f0\fs20 , but applies a \i different\i0  rotation to each individual bar rather than a uniform rotation across the whole sequence.\par
+\par
+\pard\pardeftab720\sl300\slmult1\sb100
+\f0\fs20\b Note on quantization:\b0\par
+\par
+All bars in Voice 2 are quantized to the delta grid. A note longer than delta\par
+(e.g. a quarter note with \f1\fs18 delta=1/16\f0\fs20 ) becomes a 1/16 attack followed by 1/16 rests.\par
+This means Voice 2 will sound more staccato than Voice 1 when \f1\fs18 delta < note-duration\f0\fs20 .\par
+\par
+{\f0\fs20 Results are cleanest and most notation-friendly when note durations in the sequence are \b exact multiples of delta\b0 :}\par
+\pard\pardeftab720\sl300\slmult1\sb60\li360
+\f1\fs18
+All 1/16 notes  +  delta 1/16    ->  each rotation removes one note attack  (ideal)\par
+All 1/8 notes   +  delta 1/8     ->  each rotation removes one note attack  (ideal)\par
+All 1/4 notes   +  delta 1/8     ->  attack + 1 rest slot per note, rotation shifts attack\par
+Mixed durations +  any delta     ->  works for MIDI; notation may be approximate\par
+\pard\pardeftab720\sl300\slmult1\sb200
+
+\f0\fs20\b Native Opusmodus / repo functions used:\b0\par
+\pard\pardeftab720\sl300\slmult1\sb60\li360
+\f0\fs20
+\f1\fs18 length-to-grid\f0\fs20 \tab\tab  Quantizes each bar to delta-sized events (repo function).\par
+\f1\fs18 gen-rotate\f0\fs20 \tab\tab\tab  Left-rotates the flat quantized bar by n events.\par
+\f1\fs18 get-time-signature\f0\fs20 \tab  Extracts the original bar structure.\par
+\f1\fs18 omn-to-time-signature\f0\fs20 \tab  Re-bars the flat phased stream to original measure lines.\par
+\pard\pardeftab720\sl320\slmult1\sb300
+
+\f0\fs20\b\ul Examples:\b0\ul0
+\par
+\pard\pardeftab720\sl300\slmult1\sb100
+
+\f0\fs20\b Example 1 \b0 \'96 Cleanest case: all notes already at 1/16 grid:\par
+\pard\pardeftab720\sl300\slmult1\sb60\li360
+\f1\fs18
+(apply-negative-phasing\par
+  \'92((s c4 d4 e4 f4 g4 a4 b4 c5)\par
+    (s d5 e5 f5 g5 a5 g5 f5 e5)\par
+    (s d5 c5 b4 a4 g4 f4 e4 d4)\par
+    (s c4 d4 e4 f4 g4 a4 b4 c5))\par
+  1/16)\par
+\par
+;; Bar 1: (s c4 d4 e4 f4 g4 a4 b4 c5)  unchanged\par
+;; Bar 2: (s d4 e4 f4 g4 a4 b4 c5 c4)  c4 wraps to end\par
+;; Bar 3: (s e4 f4 g4 a4 b4 c5 c4 d4)  c4 d4 wrap to end\par
+;; Bar 4: (s f4 g4 a4 b4 c5 c4 d4 e4)  c4 d4 e4 wrap to end\par
+\pard\pardeftab720\sl300\slmult1\sb200
+
+\f0\fs20\b Example 2 \b0 \'96 Quarter-note bars, delta = 1/4 (clean alignment):\par
+\pard\pardeftab720\sl300\slmult1\sb60\li360
+\f1\fs18
+(apply-negative-phasing\par
+  \'92((q c4 d4 e4 f4)\par
+    (q g4 a4 b4 c5)\par
+    (q d5 e5 f5 g5)\par
+    (q a5 g5 f5 e5))\par
+  1/4)\par
+\par
+;; Bar 1: (q c4 d4 e4 f4)  unchanged\par
+;; Bar 2: (q a4 b4 c5 g4)  g4 wraps to end\par
+;; Bar 3: (q f5 g5 d5 e5)  d5 e5 wrap to end\par
+;; Bar 4: (q f5 e5 a5 g5)  a5 g5 f5 wrap to end\par
+\pard\pardeftab720\sl300\slmult1\sb200
+
+\f0\fs20\b Example 3 \b0 \'96 Slower phasing, delta increments every 2 bars:\par
+\pard\pardeftab720\sl300\slmult1\sb60\li360
+\f1\fs18
+(apply-negative-phasing\par
+  \'92((s c4 d4 e4 f4 g4 a4 b4 c5)\par
+    (s d5 e5 f5 g5 a5 g5 f5 e5)\par
+    (s d5 c5 b4 a4 g4 f4 e4 d4)\par
+    (s c4 d4 e4 f4 g4 a4 b4 c5)\par
+    (s e4 f4 g4 a4 b4 c5 d5 e5)\par
+    (s f5 g5 a5 b5 c6 b5 a5 g5))\par
+  1/16\par
+  :step-repeat 2)\par
+\par
+;; Bars 1-2: rotation 0 (unchanged)\par
+;; Bars 3-4: rotate left 1 delta\par
+;; Bars 5-6: rotate left 2 delta\par
+\pard\pardeftab720\sl300\slmult1\sb200
+
+\f0\fs20\b Example 4 \b0 \'96 Combined with \f1\fs18 apply-phasing\f0\fs20  for a converging/diverging pair:\par
+\pard\pardeftab720\sl300\slmult1\sb60\li360
+\f1\fs18
+(setf source \'92((s c4 d4 e4 f4 g4 a4 b4 c5)\par
+               (s d5 e5 f5 g5 a5 g5 f5 e5)\par
+               (s d5 c5 b4 a4 g4 f4 e4 d4)\par
+               (s c4 d4 e4 f4 g4 a4 b4 c5)))\par
+\par
+;; Voice 2: positive phase (content shifts later)\par
+(setf pos (apply-phasing source 1/16))\par
+\par
+;; Voice 3: negative phase (content shifts earlier, wrapping)\par
+(setf neg (apply-negative-phasing source 1/16))\par
+\par
+(def-score converge-diverge\par
+           (:title         "Converging Phases"\par
+            :tempo         120\par
+            :time-signature (get-time-signature source))\par
+  (original :omn source          :channel 1)\par
+  (later    :omn (second pos)    :channel 2)\par
+  (earlier  :omn (second neg)    :channel 3))\par
+\pard\pardeftab720\sl320\slmult1\sb300
+
+\f0\fs20\b\ul Return Value:\b0\ul0
+\par
+\pard\pardeftab720\sl300\slmult1\sb100
+\f0\fs20
+A list of two bar-grouped OMN voices:\par
+\par
+\pard\pardeftab720\sl300\slmult1\sb60\li360
+\f1\fs18
+(list voice-1 voice-2)\par
+\pard\pardeftab720\sl300\slmult1\sb100
+\f0\fs20\par
+Where \f1\fs18 voice-1\f0\fs20  is the original sequence and \f1\fs18 voice-2\f0\fs20  is the grid-quantized,\par
+left-rotated, re-barred version. Both are nested lists grouped by bar,\par
+ready for direct use in \f1\fs18 def-score\f0\fs20 .\par
+\par
+{\f0\fs20 \b Contrast with\b0  \f1\fs18 apply-phasing\f0\fs20 :}\par
+\pard\pardeftab720\sl300\slmult1\sb60\li360
+\f1\fs18
+apply-phasing         \f0\fs20  prepends a rest (content shifts \i later\i0 , end is trimmed)\f1\fs18\par
+apply-negative-phasing\f0\fs20  rotates left (content shifts \i earlier\i0 , start wraps to end)\f1\fs18\par
+\pard\pardeftab720\sl300\slmult1\sb60
+\f0\fs20\par
+Use both together on the same source material to create converging and\par
+diverging phase relationships simultaneously.\par
+}
