@@ -1077,6 +1077,13 @@
              <label style="display:flex; align-items:center; gap:4px; font-size:0.75rem; color:var(--text-dim); margin-right:5px; font-family:var(--mono); border:1px solid var(--border); padding:3px 8px; border-radius:2px; cursor:pointer;" title="Adds generated blocks automatically to the end of your sequence">
                <input type="checkbox" id="autoAddSeqOverlay" /> auto-add blocks to sequence
              </label>
+             <label style="display:flex; align-items:center; gap:4px; font-size:0.75rem; color:var(--text-dim); margin-right:5px; font-family:var(--mono);">
+               Rate:
+               <select id="pitchRate" class="pitch-layer-select" style="font-family:var(--mono); font-size:0.7rem; background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:2px 4px; border-radius:2px; cursor:pointer;" title="Wait for pitch to advance until sequence repetition completes, or advance immediately per block.">
+                 <option value="step">Wait for block repetitions</option>
+                 <option value="block">Change immediately (1-by-1)</option>
+               </select>
+             </label>
              <span style="letter-spacing:0.05em">PITCH OVERLAYS:</span>
              <div id="pitchStack" style="display:flex; gap:5px; flex-wrap:wrap;">
                <select class="pitch-layer-select" style="font-family:var(--mono); font-size:0.75rem; background:var(--bg2); color:var(--accent2); border:1px solid var(--border); padding:3px 8px; border-radius:2px; cursor:pointer;">
@@ -2230,8 +2237,10 @@
 
         const prefix = "A" + blockCounter;
         const autoSeq = document.getElementById("autoAddSeqOverlay") && document.getElementById("autoAddSeqOverlay").checked;
+        const rate = (document.getElementById("pitchRate") && document.getElementById("pitchRate").value) || "step";
         phases.forEach((cells, i) => {
-          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, i);
+          const pStep = rate === "step" ? Math.floor(i / reps) : i;
+          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, pStep);
           const barObj = { cells, extended };
           const name = prefix + "." + (i + 1);
           const { lengths, pitches: pl } = buildOMNForBar(barObj, pRoot, pInts, reversePitches);
@@ -2327,8 +2336,10 @@
 
         const prefix = "BA" + blockCounter;
         const autoSeq = document.getElementById("autoAddSeqOverlay") && document.getElementById("autoAddSeqOverlay").checked;
+        const rate = (document.getElementById("pitchRate") && document.getElementById("pitchRate").value) || "step";
         phases.forEach((cells, i) => {
-          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, i);
+          const pStep = rate === "step" ? Math.floor(i / reps) : i;
+          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, pStep);
           const barObj = { cells, extended };
           const name = prefix + "." + (i + 1);
           const { lengths, pitches: pl } = buildOMNForBar(barObj, pRoot, pInts, reversePitches);
@@ -2396,8 +2407,11 @@
 
         const prefix = "P" + blockCounter;
         const autoSeq = document.getElementById("autoAddSeqOverlay") && document.getElementById("autoAddSeqOverlay").checked;
+        const rate = (document.getElementById("pitchRate") && document.getElementById("pitchRate").value) || "step";
+        const reps = 1;
         phases.forEach((cells, i) => {
-          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, i);
+          const pStep = rate === "step" ? Math.floor(i / reps) : i;
+          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, pStep);
           const barObj = { cells, extended };
           const name = prefix + "." + (i + 1);
           const { lengths, pitches: pl } = buildOMNForBar(barObj, pRoot, pInts, reversePitches);
