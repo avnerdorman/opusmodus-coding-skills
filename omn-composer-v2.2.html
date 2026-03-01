@@ -2012,6 +2012,7 @@
           } else if (type === "transpose-down") {
             rootMidi -= 1;
           } else if (type === "rotate") {
+            rootMidi += newInts[0];
             newInts = [...newInts.slice(1), newInts[0]];
           } else if (type === "invert") {
             newInts = newInts.map(x => -x);
@@ -2256,11 +2257,15 @@
         );
         let len = bars[currentBar].cells.length;
         let extended = bars[currentBar].extended;
+        let baseInts = intervals;
+        let baseRoot = rootNote;
 
         if (mode && mode.startsWith("block_")) {
             const bIdx = parseInt(mode.split("_")[1]);
             len = blocks[bIdx].cells.length;
             extended = blocks[bIdx].extended;
+            baseInts = blocks[bIdx].intervals;
+            baseRoot = blocks[bIdx].root;
         }
 
         // build phases
@@ -2291,7 +2296,7 @@
         const rate = (document.getElementById("pitchRate") && document.getElementById("pitchRate").value) || "step";
         phases.forEach((cells, i) => {
           const pStep = rate === "step" ? Math.floor(i / reps) : i;
-          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, pStep);
+          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(baseInts, baseRoot, pStep);
           const barObj = { cells, extended };
           const name = prefix + "." + (i + 1);
           const { lengths, pitches: pl } = buildOMNForBar(barObj, pRoot, pInts, reversePitches);
@@ -2359,10 +2364,14 @@
           parseInt(document.getElementById("reichReps").value) || 2,
         );
         let extended = bars[currentBar].extended;
+        let baseInts = intervals;
+        let baseRoot = rootNote;
 
         if (mode && mode.startsWith("block_")) {
             const bIdx = parseInt(mode.split("_")[1]);
             extended = blocks[bIdx].extended;
+            baseInts = blocks[bIdx].intervals;
+            baseRoot = blocks[bIdx].root;
         }
 
         const phases = [];
@@ -2400,7 +2409,7 @@
         const rate = (document.getElementById("pitchRate") && document.getElementById("pitchRate").value) || "step";
         phases.forEach((cells, i) => {
           const pStep = rate === "step" ? Math.floor(i / reps) : i;
-          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, pStep);
+          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(baseInts, baseRoot, pStep);
           const barObj = { cells, extended };
           const name = prefix + "." + (i + 1);
           const { lengths, pitches: pl } = buildOMNForBar(barObj, pRoot, pInts, reversePitches);
@@ -2444,11 +2453,15 @@
         
         let extended = bars[currentBar].extended;
         let baseCells = bars[currentBar].cells;
+        let baseInts = intervals;
+        let baseRoot = rootNote;
 
         if (mode && mode.startsWith("block_")) {
             const bIdx = parseInt(mode.split("_")[1]);
             extended = blocks[bIdx].extended;
             baseCells = blocks[bIdx].cells;
+            baseInts = blocks[bIdx].intervals;
+            baseRoot = blocks[bIdx].root;
         }
 
         const len = baseCells.length;
@@ -2480,7 +2493,7 @@
         const reps = 1;
         phases.forEach((cells, i) => {
           const pStep = rate === "step" ? Math.floor(i / reps) : i;
-          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, pStep);
+          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(baseInts, baseRoot, pStep);
           const barObj = { cells, extended };
           const name = prefix + "." + (i + 1);
           const { lengths, pitches: pl } = buildOMNForBar(barObj, pRoot, pInts, reversePitches);
