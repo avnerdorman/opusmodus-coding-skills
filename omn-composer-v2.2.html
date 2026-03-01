@@ -569,7 +569,7 @@
         border: none;
         color: var(--danger);
         cursor: pointer;
-        font-size: 0.65rem;
+        font-size: 0.9rem;
         opacity: 0.45;
       }
       .block-del:hover {
@@ -631,7 +631,7 @@
       .seq-slot .del {
         color: var(--danger);
         cursor: pointer;
-        font-size: 0.7rem;
+        font-size: 0.95rem;
         opacity: 0.6;
       }
       .seq-slot.active .del {
@@ -712,9 +712,9 @@
       .tempo-slider {
         -webkit-appearance: none;
         appearance: none;
-        width: 90px;
-        height: 3px;
-        border-radius: 2px;
+        width: 150px;
+        height: 6px;
+        border-radius: 3px;
         background: var(--border);
         outline: none;
         cursor: pointer;
@@ -722,8 +722,8 @@
       .tempo-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
-        width: 13px;
-        height: 13px;
+        width: 20px;
+        height: 20px;
         border-radius: 50%;
         background: var(--accent);
         cursor: pointer;
@@ -1074,6 +1074,9 @@
         <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
           <div class="panel-title" style="margin-bottom:0; border-bottom:none; padding-bottom:0;">PROCESS GENERATORS</div>
           <div style="font-family:var(--display); font-size:1.0rem; color:var(--accent2); display:flex; gap:10px; align-items:center;">
+             <label style="display:flex; align-items:center; gap:4px; font-size:0.75rem; color:var(--text-dim); margin-right:5px; font-family:var(--mono); border:1px solid var(--border); padding:3px 8px; border-radius:2px; cursor:pointer;" title="Adds generated blocks automatically to the end of your sequence">
+               <input type="checkbox" id="autoAddSeqOverlay" /> auto-add blocks to sequence
+             </label>
              <span style="letter-spacing:0.05em">PITCH OVERLAYS:</span>
              <div id="pitchStack" style="display:flex; gap:5px; flex-wrap:wrap;">
                <select class="pitch-layer-select" style="font-family:var(--mono); font-size:0.75rem; background:var(--bg2); color:var(--accent2); border:1px solid var(--border); padding:3px 8px; border-radius:2px; cursor:pointer;">
@@ -1286,7 +1289,10 @@
 
       <!-- BLOCK LIBRARY -->
       <div class="panel-full">
-        <div class="panel-title">BLOCK LIBRARY</div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
+          <div class="panel-title" style="margin-bottom:0;">BLOCK LIBRARY</div>
+          <button class="tx-btn" style="border:1px solid var(--border); border-radius:3px; padding:2px 6px;" onclick="clearBlocks()">clear library</button>
+        </div>
         <div class="blocks-row" id="blocksRow">
           <span class="seq-hint"
             >Store transformations here. Click a block to load it, double-click
@@ -1297,25 +1303,18 @@
 
       <!-- SEQUENCE BUILDER -->
       <div class="panel-full">
-        <div class="panel-title">SEQUENCE BUILDER</div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
+          <div class="panel-title" style="margin-bottom:0;">SEQUENCE BUILDER</div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="copy-btn" onclick="copyFullSequence()">copy full OMN</button>
+            <button class="tx-btn" style="border:1px solid var(--border); border-radius:3px; padding:2px 6px;" onclick="clearSequence()">clear sequence</button>
+          </div>
+        </div>
         <div class="sequence-slots" id="sequenceSlots">
           <span class="seq-hint"
             >Double-click blocks above · or click a block then click "→
             seq"</span
           >
-        </div>
-        <div
-          style="
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            margin-bottom: 10px;
-          "
-        >
-          <button class="copy-btn" onclick="copyFullSequence()">
-            copy full OMN
-          </button>
-          <button class="tx-btn" onclick="clearSequence()">clear</button>
         </div>
         <div class="omn-output" id="sequenceOMN" style="min-height: 40px">
           ;; Full sequence OMN
@@ -2060,6 +2059,14 @@
         sequence = [];
         renderAll();
       }
+      function clearBlocks() {
+        if(confirm("Are you sure you want to clear the entire block library?")) {
+          blocks = [];
+          sequence = [];
+          blockCounter = 1;
+          renderAll();
+        }
+      }
 
       // ══════════════════════════════════════════
       // ADDITIVE/SUBTRACTIVE — REICH
@@ -2196,6 +2203,7 @@
         }
 
         const prefix = "A" + blockCounter;
+        const autoSeq = document.getElementById("autoAddSeqOverlay") && document.getElementById("autoAddSeqOverlay").checked;
         phases.forEach((cells, i) => {
           const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, i);
           const barObj = { cells, extended };
@@ -2212,6 +2220,7 @@
             pitchList: pl,
             color: getNextColor()
           });
+          if (autoSeq) sequence.push(blocks.length - 1);
         });
         blockCounter++;
         renderAll();
@@ -2290,6 +2299,7 @@
         });
 
         const prefix = "BA" + blockCounter;
+        const autoSeq = document.getElementById("autoAddSeqOverlay") && document.getElementById("autoAddSeqOverlay").checked;
         phases.forEach((cells, i) => {
           const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, i);
           const barObj = { cells, extended };
@@ -2306,6 +2316,7 @@
             pitchList: pl,
             color: getNextColor()
           });
+          if (autoSeq) sequence.push(blocks.length - 1);
         });
         blockCounter++;
         renderAll();
@@ -2356,6 +2367,7 @@
         }
 
         const prefix = "P" + blockCounter;
+        const autoSeq = document.getElementById("autoAddSeqOverlay") && document.getElementById("autoAddSeqOverlay").checked;
         phases.forEach((cells, i) => {
           const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, i);
           const barObj = { cells, extended };
@@ -2372,6 +2384,7 @@
             pitchList: pl,
             color: getNextColor()
           });
+          if (autoSeq) sequence.push(blocks.length - 1);
         });
         
         blockCounter++;
