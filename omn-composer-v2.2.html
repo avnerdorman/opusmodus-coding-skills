@@ -1132,7 +1132,7 @@
               </div>
               <div class="param-row">
                 <span class="param-label">Start from</span>
-                <select class="param-select" id="glassStart">
+                <select class="param-select source-select" id="glassStart">
                   <option value="current">current bar</option>
                   <option value="full">all notes on</option>
                   <option value="empty">all notes off</option>
@@ -1180,6 +1180,12 @@
               Shifts a subsection of the bar over time while leaving the rest intact.
             </div>
             <div class="process-params">
+              <div class="param-row">
+                <span class="param-label">Source</span>
+                <select class="param-select source-select" id="phaseSource">
+                  <option value="current">current bar</option>
+                </select>
+              </div>
               <div class="param-row">
                 <span class="param-label">Shift start pos</span>
                 <input class="param-input" id="phaseStart" type="number" value="0" min="0" max="63" />
@@ -1280,7 +1286,7 @@
               </div>
               <div class="param-row">
                 <span class="param-label">Fill pattern</span>
-                <select class="param-select" id="reichFill">
+                <select class="param-select source-select" id="reichFill">
                   <option value="current">from current bar pattern</option>
                   <option value="all">all notes on</option>
                   <option value="alt">alternating 1 0</option>
@@ -1798,6 +1804,36 @@
           `(setf my-idea\n  (make-omn \n   :length '(\n${lenParts.map(p => "          " + p.trimLeft()).join("\n")}\n   )\n   :pitch (flatten (list \n${funcPitchParts.join("\n")}\n          ))))`;
       }
 
+      function renderProcessSourceDropdowns() {
+        document.querySelectorAll(".source-select").forEach((sel) => {
+          const val = sel.value;
+          const staticOptions = Array.from(sel.options).filter(o => !o.value.startsWith("block_") && !o.disabled);
+          sel.innerHTML = "";
+          staticOptions.forEach(o => sel.appendChild(o));
+          
+          if (blocks.length > 0) {
+            const separator = document.createElement("option");
+            separator.disabled = true;
+            separator.textContent = "── Blocks ──";
+            separator.value = "";
+            sel.appendChild(separator);
+            
+            blocks.forEach((b, i) => {
+              const opt = document.createElement("option");
+              opt.value = "block_" + i;
+              opt.textContent = `Block ${b.name}`;
+              sel.appendChild(opt);
+            });
+          }
+          
+          if (Array.from(sel.options).some(o => o.value === val)) {
+            sel.value = val;
+          } else {
+            sel.selectedIndex = 0;
+          }
+        });
+      }
+
       // ══════════════════════════════════════════
       // RENDER ALL
       // ══════════════════════════════════════════
@@ -1812,6 +1848,7 @@
         renderPitchPreview();
         renderOMN();
         renderBlocks();
+        renderProcessSourceDropdowns();
         renderSequenceSlots();
         renderSequenceOMN();
       }
@@ -2113,6 +2150,13 @@
           a[0] = 1;
           return a;
         }
+        if (mode.startsWith("block_")) {
+          const bIdx = parseInt(mode.split("_")[1]);
+          const bCells = blocks[bIdx].cells;
+          const a = new Array(len).fill(0);
+          for(let i=0; i<len; i++) a[i] = bCells[i % bCells.length];
+          return a;
+        }
         return [...bars[currentBar].cells.slice(0, len)];
       }
 
@@ -2205,12 +2249,19 @@
       function generateGlass() {
         const dir = document.getElementById("glassDir").value;
         const pos = document.getElementById("glassPos").value;
+        const mode = document.getElementById("glassStart").value;
         const reps = Math.max(
           1,
           parseInt(document.getElementById("glassReps").value) || 2,
         );
-        const len = bars[currentBar].cells.length;
-        const extended = bars[currentBar].extended;
+        let len = bars[currentBar].cells.length;
+        let extended = bars[currentBar].extended;
+
+        if (mode && mode.startsWith("block_")) {
+            const bIdx = parseInt(mode.split("_")[1]);
+            len = blocks[bIdx].cells.length;
+            extended = blocks[bIdx].extended;
+        }
 
         // build phases
         const phases = [];
@@ -2279,13 +2330,18 @@
         if (mode === "all") return new Array(len).fill(1);
         if (mode === "alt")
           return Array.from({ length: len }, (_, i) => (i % 2 === 0 ? 1 : 0));
-        // 'current': tile the current bar pattern
-        const src = bars[currentBar].cells;
+        
+        let src = bars[currentBar].cells;
+        if (mode && mode.startsWith("block_")) {
+           const bIdx = parseInt(mode.split("_")[1]);
+           src = blocks[bIdx].cells;
+        }
         return Array.from({ length: len }, (_, i) => src[i % src.length]);
       }
 
       function generateReich() {
         const dir = document.getElementById("reichDir").value;
+        const mode = document.getElementById("reichFill").value;
         const startLen = Math.max(
           1,
           parseInt(document.getElementById("reichStart").value) || 4,
@@ -2302,7 +2358,12 @@
           1,
           parseInt(document.getElementById("reichReps").value) || 2,
         );
-        const extended = bars[currentBar].extended;
+        let extended = bars[currentBar].extended;
+
+        if (mode && mode.startsWith("block_")) {
+            const bIdx = parseInt(mode.split("_")[1]);
+            extended = blocks[bIdx].extended;
+        }
 
         const phases = [];
         const makeLengths = (from, to) => {
@@ -2379,9 +2440,17 @@
         const dir = document.getElementById("phaseDir").value;
         const step = Math.max(1, parseInt(document.getElementById("phaseStep").value) || 1);
         const total = Math.max(1, parseInt(document.getElementById("phaseTotal").value) || 8);
-        const extended = bars[currentBar].extended;
+        const mode = document.getElementById("phaseSource").value;
         
-        const baseCells = bars[currentBar].cells;
+        let extended = bars[currentBar].extended;
+        let baseCells = bars[currentBar].cells;
+
+        if (mode && mode.startsWith("block_")) {
+            const bIdx = parseInt(mode.split("_")[1]);
+            extended = blocks[bIdx].extended;
+            baseCells = blocks[bIdx].cells;
+        }
+
         const len = baseCells.length;
         
         const phases = [];
