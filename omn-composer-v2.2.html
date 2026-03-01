@@ -824,12 +824,18 @@
   </head>
   <body>
     <div class="app">
-      <header>
-        <h1>OMN WORKBENCH</h1>
-        <span class="subtitle"
-          >v2 · variable length · additive/subtractive process · extended
-          notes</span
-        >
+      <header style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h1>OMN WORKBENCH</h1>
+          <span class="subtitle"
+            >v2 · variable length · additive/subtractive process · extended
+            notes</span
+          >
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="store-btn" onclick="saveConfig()">Save Config</button>
+          <button class="copy-btn" onclick="loadConfig()">Load Config</button>
+        </div>
       </header>
 
       <!-- PLAYBACK BAR -->
@@ -1065,7 +1071,30 @@
 
       <!-- ADDITIVE / SUBTRACTIVE PROCESS -->
       <div class="panel-full">
-        <div class="panel-title">ADDITIVE / SUBTRACTIVE PROCESS GENERATOR</div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+          <div class="panel-title" style="margin-bottom:0; border-bottom:none; padding-bottom:0;">PROCESS GENERATORS</div>
+          <div style="font-family:var(--display); font-size:1.0rem; color:var(--accent2); display:flex; gap:10px; align-items:center;">
+             <span style="letter-spacing:0.05em">PITCH OVERLAYS:</span>
+             <div id="pitchStack" style="display:flex; gap:5px; flex-wrap:wrap;">
+               <select class="pitch-layer-select" style="font-family:var(--mono); font-size:0.75rem; background:var(--bg2); color:var(--accent2); border:1px solid var(--border); padding:3px 8px; border-radius:2px; cursor:pointer;">
+                  <option value="none">None (Static Pitch)</option>
+                  <option value="invert">Alternate: Invert Intervals (Up ⇄ Down)</option>
+                  <option value="retrograde-sequence">Alternate: Retrograde Pitches (Backwards)</option>
+                  <option value="retrograde">Alternate: Retrograde Interval Array</option>
+                  <option disabled>──────────</option>
+                  <option value="torke-up">Progressive: Torke Up (Raise note 1-by-1)</option>
+                  <option value="torke-down">Progressive: Torke Down (Lower note 1-by-1)</option>
+                  <option value="expand">Progressive: Expand Intervals (+1)</option>
+                  <option value="contract">Progressive: Contract Intervals (-1)</option>
+                  <option value="transpose-up">Progressive: Transpose Up (+half step)</option>
+                  <option value="transpose-down">Progressive: Transpose Down (-half step)</option>
+                  <option value="rotate">Progressive: Rotate Intervals</option>
+               </select>
+             </div>
+             <button onclick="addPitchLayer()" style="background:none; border:1px solid #56d364; color:#56d364; cursor:pointer; padding:2px 6px; border-radius:2px; font-weight:bold; font-size:0.7rem;">+</button>
+             <button onclick="removePitchLayer()" style="background:none; border:1px solid var(--danger); color:var(--danger); cursor:pointer; padding:2px 7px; border-radius:2px; font-weight:bold; font-size:0.7rem;">-</button>
+          </div>
+        </div>
         <div class="process-grid">
           <!-- ADDITIVE MODE -->
           <div class="process-box">
@@ -1435,10 +1464,14 @@
       // ══════════════════════════════════════════
       // BUILD OMN STRING
       // ══════════════════════════════════════════
-      function buildOMNForBar(barObj) {
+      function buildOMNForBar(barObj, overrideRoot, overrideInts, reversePitches) {
         const { cells, extended } = barObj;
+        const r = overrideRoot || rootNote;
+        const i = overrideInts || intervals;
         const tokens = binaryToLengthTokens(cells, extended);
-        const pitches = generatePitches(rootNote, intervals, cells.length + 4);
+        const pitchCount = tokens.filter((t) => !t.isRest).length;
+        // ensure we generate enough pitches for the actual note count in the bar
+        let pitches = generatePitches(r, i, Math.max(pitchCount, cells.length));
 
         const lengths = [];
         const pitchList = [];
@@ -1450,6 +1483,10 @@
             pitchList.push(midiToOMN(pitches[pitchIdx++ % pitches.length]));
           }
         });
+
+        if (reversePitches) {
+          pitchList.reverse();
+        }
 
         return {
           lengths,
@@ -1834,7 +1871,13 @@
         renderAll();
       }
       function pitchInvert() {
-        intervals = intervals.map((x) => -x);
+        const N = intervals.length;
+        if(N === 0) return;
+        // The new root is the highest pitch in the current cycle
+        const topPitchFreq = intervals.reduce((sum, curr) => sum + curr, 0);
+        const rm = noteToMidi(rootNote);
+        rootNote = midiToOMN(rm + topPitchFreq);
+        intervals = intervals.map((x) => -x).reverse();
         renderAll();
       }
       function pitchRetrograde() {
@@ -1857,6 +1900,103 @@
       }
 
       // ══════════════════════════════════════════
+      // PITCH EVOLUTION LOGIC
+      // ══════════════════════════════════════════
+      function applyPitchProcess(baseInts, baseRoot, type, step) {
+        if (type === "none" || step === 0) return { root: baseRoot, ints: [...baseInts] };
+        
+        let newInts = [...baseInts];
+        let rootMidi = noteToMidi(baseRoot);
+        const N = newInts.length;
+        if (N === 0) {
+           if (type === "transpose-up") return { root: midiToOMN(rootMidi + step), ints: [] };
+           if (type === "transpose-down") return { root: midiToOMN(rootMidi - step), ints: [] };
+           return { root: baseRoot, ints: [] };
+        }
+
+        for (let s = 1; s <= step; s++) {
+          if (type === "torke-up") {
+            let target = N - ((s - 1) % N) - 1; 
+            if (target === 0 && N > 0) {
+              rootMidi += 1;
+              newInts[0] -= 1;
+              newInts[N-1] += 1;
+            } else if (target > 0) {
+              newInts[target - 1] += 1;
+              newInts[target] -= 1;
+            }
+          } else if (type === "torke-down") {
+            let target = N - ((s - 1) % N) - 1;
+            if (target === 0 && N > 0) {
+              rootMidi -= 1;
+              newInts[0] += 1;
+              newInts[N-1] -= 1;
+            } else if (target > 0) {
+              newInts[target - 1] -= 1;
+              newInts[target] += 1;
+            }
+          } else if (type === "expand") {
+            for(let i=0; i<N; i++) newInts[i] += 1;
+          } else if (type === "contract") {
+            for(let i=0; i<N; i++) newInts[i] -= 1;
+          } else if (type === "transpose-up") {
+            rootMidi += 1;
+          } else if (type === "transpose-down") {
+            rootMidi -= 1;
+          } else if (type === "rotate") {
+            newInts = [...newInts.slice(1), newInts[0]];
+          } else if (type === "invert") {
+            newInts = newInts.map(x => -x);
+          } else if (type === "retrograde") {
+            newInts = [...newInts].reverse();
+          }
+        }
+        return { root: midiToOMN(rootMidi), ints: newInts };
+      }
+
+      function addPitchLayer() {
+        const stack = document.getElementById('pitchStack');
+        const first = stack.querySelector('.pitch-layer-select');
+        const clone = first.cloneNode(true);
+        clone.value = "none";
+        stack.appendChild(clone);
+      }
+      function removePitchLayer() {
+        const stack = document.getElementById('pitchStack');
+        if(stack.children.length > 1) {
+          stack.removeChild(stack.lastElementChild);
+        }
+      }
+
+      function applyPitchProcessStack(baseInts, baseRoot, steps) {
+        const layers = Array.from(document.querySelectorAll('.pitch-layer-select')).map(s => s.value);
+        let currentInts = [...baseInts];
+        let currentRoot = baseRoot;
+        let reversePitches = false;
+
+        for (let type of layers) {
+          if (type === "retrograde-sequence" && steps % 2 === 1) {
+            reversePitches = !reversePitches;
+          } else if (type === "invert" && steps % 2 === 1) {
+             const N = currentInts.length;
+             if (N > 0) {
+               const topGap = currentInts.reduce((sum, curr) => sum + curr, 0);
+               const rm = noteToMidi(currentRoot);
+               currentRoot = midiToOMN(rm + topGap);
+               currentInts = currentInts.map(x => -x).reverse();
+             }
+          } else if (type === "retrograde" && steps % 2 === 1) {
+             currentInts = [...currentInts].reverse();
+          } else if (type !== "invert" && type !== "retrograde" && type !== "retrograde-sequence") {
+            const res = applyPitchProcess(currentInts, currentRoot, type, steps);
+            currentInts = res.ints;
+            currentRoot = res.root;
+          }
+        }
+        return { root: currentRoot, ints: currentInts, reversePitches };
+      }
+
+      // ══════════════════════════════════════════
       // STORE / SEQUENCE
       // ══════════════════════════════════════════
       const PALETTE = [
@@ -1870,18 +2010,7 @@
 
       function storeBlock(overrideBarObj, overrideName, overrideColor) {
         const barObj = overrideBarObj || bars[currentBar];
-        const { lengths, pitches: pitchList } = buildOMNForBar(barObj);
-        // rebuild pitchList with current pitch state
-        const pits = generatePitches(
-          rootNote,
-          intervals,
-          barObj.cells.length + 4,
-        );
-        const pl = [];
-        let pi = 0;
-        binaryToLengthTokens(barObj.cells, barObj.extended).forEach((t) => {
-          if (!t.isRest) pl.push(midiToOMN(pits[pi++ % pits.length]));
-        });
+        const { lengths, pitches: pl } = buildOMNForBar(barObj);
 
         blocks.push({
           name: overrideName || "B" + blockCounter++,
@@ -2068,21 +2197,17 @@
 
         const prefix = "A" + blockCounter;
         phases.forEach((cells, i) => {
+          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, i);
           const barObj = { cells, extended };
           const name = prefix + "." + (i + 1);
-          const { lengths } = buildOMNForBar(barObj);
-          const pits = generatePitches(rootNote, intervals, cells.length + 4);
-          const pl = [];
-          let pi = 0;
-          binaryToLengthTokens(cells, extended).forEach((t) => {
-            if (!t.isRest) pl.push(midiToOMN(pits[pi++ % pits.length]));
-          });
+          const { lengths, pitches: pl } = buildOMNForBar(barObj, pRoot, pInts, reversePitches);
+          
           blocks.push({
             name,
             cells: [...cells],
             extended,
-            intervals: [...intervals],
-            root: rootNote,
+            intervals: [...pInts],
+            root: pRoot,
             lengths,
             pitchList: pl,
             color: getNextColor()
@@ -2166,21 +2291,17 @@
 
         const prefix = "BA" + blockCounter;
         phases.forEach((cells, i) => {
+          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, i);
           const barObj = { cells, extended };
           const name = prefix + "." + (i + 1);
-          const { lengths } = buildOMNForBar(barObj);
-          const pits = generatePitches(rootNote, intervals, cells.length + 4);
-          const pl = [];
-          let pi = 0;
-          binaryToLengthTokens(cells, extended).forEach((t) => {
-            if (!t.isRest) pl.push(midiToOMN(pits[pi++ % pits.length]));
-          });
+          const { lengths, pitches: pl } = buildOMNForBar(barObj, pRoot, pInts, reversePitches);
+          
           blocks.push({
             name,
             cells: [...cells],
             extended,
-            intervals: [...intervals],
-            root: rootNote,
+            intervals: [...pInts],
+            root: pRoot,
             lengths,
             pitchList: pl,
             color: getNextColor()
@@ -2236,21 +2357,17 @@
 
         const prefix = "P" + blockCounter;
         phases.forEach((cells, i) => {
+          const { root: pRoot, ints: pInts, reversePitches } = applyPitchProcessStack(intervals, rootNote, i);
           const barObj = { cells, extended };
           const name = prefix + "." + (i + 1);
-          const { lengths } = buildOMNForBar(barObj);
-          const pits = generatePitches(rootNote, intervals, cells.length + 4);
-          const pl = [];
-          let pi = 0;
-          binaryToLengthTokens(cells, extended).forEach((t) => {
-            if (!t.isRest) pl.push(midiToOMN(pits[pi++ % pits.length]));
-          });
+          const { lengths, pitches: pl } = buildOMNForBar(barObj, pRoot, pInts, reversePitches);
+          
           blocks.push({
             name,
             cells: [...cells],
             extended,
-            intervals: [...intervals],
-            root: rootNote,
+            intervals: [...pInts],
+            root: pRoot,
             lengths,
             pitchList: pl,
             color: getNextColor()
@@ -2261,6 +2378,66 @@
         renderAll();
         flash("Generated " + phases.length + " Phase blocks (P" + (blockCounter - 1) + ")");
         document.getElementById("phasePreview").textContent = "→ " + phases.length + " blocks generated.";
+      }
+
+      // ══════════════════════════════════════════
+      // CONFIGURATION SAVE/LOAD
+      // ══════════════════════════════════════════
+      function saveConfig() {
+        const data = {
+          bars, currentBar, intervals, rootNote, blocks, sequence, blockCounter,
+          tempo: document.getElementById('tempoSlider').value,
+          waveform: document.getElementById('waveform').value,
+          loopToggle: document.getElementById('loopToggle').checked,
+          seqLoopToggle: document.getElementById('seqLoopToggle').checked,
+        };
+        const json = JSON.stringify(data);
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "omn_workbench_config.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        flash("Config downloaded");
+      }
+
+      function loadConfig() {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "application/json";
+        input.onchange = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (re) => {
+            try {
+              const data = JSON.parse(re.target.result);
+              if (data.bars) bars = data.bars;
+              if (data.currentBar !== undefined) currentBar = data.currentBar;
+              if (data.intervals) intervals = data.intervals;
+              if (data.rootNote) rootNote = data.rootNote;
+              if (data.blocks) blocks = data.blocks;
+              if (data.sequence) sequence = data.sequence;
+              if (data.blockCounter) blockCounter = data.blockCounter;
+              if (data.tempo) {
+                document.getElementById('tempoSlider').value = data.tempo;
+                document.getElementById('tempoVal').textContent = data.tempo + " ♩";
+              }
+              if (data.waveform) document.getElementById('waveform').value = data.waveform;
+              if (data.loopToggle !== undefined) document.getElementById('loopToggle').checked = data.loopToggle;
+              if (data.seqLoopToggle !== undefined) document.getElementById('seqLoopToggle').checked = data.seqLoopToggle;
+              document.getElementById('rootNote').value = rootNote;
+              syncLenInput();
+              renderAll();
+              flash("Config loaded");
+            } catch (err) {
+              alert("Error parsing config file");
+            }
+          };
+          reader.readAsText(file);
+        };
+        input.click();
       }
 
       // ══════════════════════════════════════════
