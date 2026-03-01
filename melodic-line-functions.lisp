@@ -179,6 +179,136 @@
 
 
 ;;;---------------------------------------------------------
+;;; Function: gen-kernel-loop
+;;; Description: Repeat a kernel melody N times, joining cycles
+;;;              cleanly without duplicating the return-to-start note.
+;;;
+;;; How the join works:
+;;;   gen-interval-kernel-melody produces a melody whose last pitch is the
+;;;   same as 'start' (the final link interval brings you "home"). When looping,
+;;;   that shared pitch would appear twice at every cycle boundary. gen-kernel-loop
+;;;   strips the final note from all but the last cycle, so cycles join seamlessly.
+;;;
+;;;   Structure:  [cycle-body] [cycle-body] ... [complete-final-cycle]
+;;;   where cycle-body = melody with its last (return) note removed.
+;;;---------------------------------------------------------
+
+(defun gen-kernel-loop (start kernel links &key (repeat 1) variant ambitus)
+  "Repeat a kernel melody N times, joining cycles cleanly without duplicate notes.
+
+  gen-interval-kernel-melody ends on the same pitch as start (the last link
+  brings you home). Consecutive cycles would therefore share a repeated pitch.
+  gen-kernel-loop removes that return note from all but the final cycle so the
+  melody flows without interruption.
+
+  Arguments:
+    start   - Starting pitch symbol (e.g., 'a4)
+    kernel  - Repeating interval pattern in semitones (e.g., '(-1 -2 -1))
+    links   - Connecting intervals between kernel statements (e.g., '(2 6))
+    repeat  - Number of full cycles to generate (default 1, same as gen-interval-kernel-melody)
+    variant - NIL, 'p, 'r, 'i, 'ri, or '? — passed to gen-interval-kernel-melody
+    ambitus - Optional pitch range constraint
+
+  Examples:
+
+  ;; Two clean cycles from A4 with kernel (-1 -2 -1):
+  (gen-kernel-loop 'a4 '(-1 -2 -1) '(2 6) :repeat 2)
+
+  ;; Three cycles, harmonized with chord-interval-add:
+  (chord-interval-add '(8 4)
+    (gen-kernel-loop 'a4 '(-1 -2 -1) '(2 6) :repeat 3))
+
+  ;; Retrograde variant, four cycles:
+  (gen-kernel-loop 'f4 '(-5 2 -5) '(6 10) :repeat 4 :variant 'r)
+
+  ;; Constrained to violin range, three cycles:
+  (gen-kernel-loop 'g4 '(-5 2 -5) '(3 8) :repeat 3 :ambitus 'violin)"
+
+  (let* ((one-cycle (gen-interval-kernel-melody start kernel links
+                                                :variant variant
+                                                :ambitus ambitus))
+         ;; Drop the last note (= start of next cycle) from intermediate cycles
+         (cycle-body (butlast one-cycle)))
+    (if (<= repeat 1)
+        one-cycle
+        (append
+         (loop repeat (1- repeat) nconc (copy-list cycle-body))
+         one-cycle))))
+
+
+;;;---------------------------------------------------------
+;;; Function: assign-first-last-durations
+;;; Description: Assigns a starting duration to the beginning
+;;;              of a pitch list, and an ending duration to
+;;;              the last note of the list.
+;;;---------------------------------------------------------
+
+  (defun assign-first-last-durations (pitches dur1 dur2)
+    "Assigns DUR1 to the beginning of PITCHES and DUR2 to the final note.
+
+    Example:
+    (assign-first-last-durations '(eb4 d4 g4 fs4 b4 bb4 eb5) 's 'e)
+    => (s eb4 d4 g4 fs4 b4 bb4 e eb5)"
+    (cond ((null pitches) nil)
+          ((= (length pitches) 1) (list dur1 (car pitches)))
+          (t (append (list dur1)
+                    (butlast pitches)
+                    (list dur2)
+                    (last pitches)))))
+
+
+;;;---------------------------------------------------------
+;;; Function: assign-first-last-durations-nested
+;;; Description: Applies assign-first-last-durations to each
+;;;              sublist in a nested list of pitches.
+;;;---------------------------------------------------------
+
+(defun assign-first-last-durations-nested (nested-pitches dur1 dur2)
+  "Applies assign-first-last-durations to each sublist in NESTED-PITCHES.
+
+  Example:
+  (assign-first-last-durations-nested '((b3 f4 eb4) (eb4 cs4 g4)) 's 'e)
+  => ((s b3 f4 e eb4) (s eb4 cs4 e g4))"
+  (mapcar (lambda (sublist) 
+            (assign-first-last-durations sublist dur1 dur2))
+          nested-pitches))
+
+
+;;;---------------------------------------------------------
+;;; Function: split-pitches-by-interval
+;;; Description: Splits a flat list of pitches into a nested
+;;;              list based on an intervallic condition.
+;;;---------------------------------------------------------
+
+(defun split-pitches-by-interval (pitches &key (threshold -6) (test #'<))
+  "Splits a flat list of PITCHES into a nested list based on the interval 
+  between consecutive notes. If the interval between note N and N+1 
+  satisfies (TEST interval THRESHOLD), the list is split before note N+1.
+
+  Default behavior splits when the interval is strictly less than -6 
+  (e.g., -7, -8). If you wanted to split on -6, you would pass :test #'<=
+
+  Example:
+  (split-pitches-by-interval '(c4 g4 c4 c5 b4 c4) :threshold -6)
+  ;; intervals: 7, -7, 12, -1, -11
+  => ((c4 g4 c4) (c5 b4) (c4))"
+  (if (null pitches)
+      nil
+      (let* ((intervals (pitch-to-interval pitches))
+             (current-sublist (list (car pitches)))
+             (result nil))
+        (loop for p in (cdr pitches)
+              for inv in intervals
+              do (if (funcall test inv threshold)
+                     (progn
+                       (push (nreverse current-sublist) result)
+                       (setf current-sublist (list p)))
+                     (push p current-sublist)))
+        (push (nreverse current-sublist) result)
+        (nreverse result))))
+
+
+;;;---------------------------------------------------------
 ;;; Usage examples — evaluate these in the listener
 ;;;---------------------------------------------------------
 
@@ -226,3 +356,20 @@
 
 ;; Mix interval-scale with gen-kernel-variants for augmentation:
 (gen-kernel-variants 'f4 (interval-scale 2 '(-5 2 -5)) '(6 10))
+
+
+;;; --- Approach 4: gen-kernel-loop ---
+
+;; Two clean cycles from A4 with kernel (-1 -2 -1):
+(gen-kernel-loop 'a4 '(-1 -2 -1) '(2 6) :repeat 2)
+
+;; Three cycles harmonized with chord-interval-add:
+(chord-interval-add '(8 4)
+  (gen-kernel-loop 'a4 '(-1 -2 -1) '(2 6) :repeat 3))
+
+;; Compare: single call vs. looped (note the clean join — no doubled pitch):
+(gen-interval-kernel-melody 'f4 '(-5 2 -5) '(6 10))           ; ends on f4
+(gen-kernel-loop 'f4 '(-5 2 -5) '(6 10) :repeat 2)            ; f4 appears once at join
+
+;; Four cycles, retrograde variant:
+(gen-kernel-loop 'f4 '(-5 2 -5) '(6 10) :repeat 4 :variant 'r)

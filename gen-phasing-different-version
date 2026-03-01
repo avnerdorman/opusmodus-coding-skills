@@ -25,7 +25,7 @@
                        sequence))
          (voice-list
           (case method
-            ((:canon canon)
+            ((:canon 'canon)
              (loop for v from 0 below voices
                    collect
                    (if (= v 0)
@@ -40,7 +40,7 @@
                          ;; Prepend rest to the sequence for delayed voices
                          (append (if (listp rest-val) rest-val (list rest-val)) base-seq)))))
 
-            ((:rotation rotation)
+            ((:rotation 'rotation)
              (loop for v from 0 below voices
                    collect
                    (if (= v 0)
@@ -66,7 +66,7 @@
                                    ;; Negative shift rotates to the left (standard phasing).
                                   (gen-rotate (* -1 rot-amount) block))))))))
 
-            ((:rotation-time rotation-time)
+            ((:rotation-time 'rotation-time)
              (loop for v from 0 below voices
                    collect
                    (if (= v 0)
