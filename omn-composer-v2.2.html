@@ -1307,6 +1307,7 @@
           <div class="panel-title" style="margin-bottom:0;">SEQUENCE BUILDER</div>
           <div style="display: flex; gap: 8px; align-items: center;">
             <button class="copy-btn" onclick="copyFullSequence()">copy full OMN</button>
+            <button class="copy-btn" onclick="copyFuncSequence()">copy functions</button>
             <button class="tx-btn" style="border:1px solid var(--border); border-radius:3px; padding:2px 6px;" onclick="clearSequence()">clear sequence</button>
           </div>
         </div>
@@ -1318,6 +1319,9 @@
         </div>
         <div class="omn-output" id="sequenceOMN" style="min-height: 40px">
           ;; Full sequence OMN
+        </div>
+        <div class="omn-output" id="sequenceOMNFunc" style="min-height: 40px; margin-top:8px;">
+          ;; Functional sequence OMN
         </div>
       </div>
     </div>
@@ -1752,6 +1756,8 @@
         if (sequence.length === 0) {
           document.getElementById("sequenceOMN").textContent =
             ";; Add blocks to build sequence";
+          document.getElementById("sequenceOMNFunc").textContent =
+            ";; Add blocks to build functional sequence";
           return;
         }
         const lenParts = sequence.map((i) => {
@@ -1764,6 +1770,24 @@
         });
         document.getElementById("sequenceOMN").textContent =
           `(make-omn\n :length '(\n${lenParts.join("\n")}\n )\n :pitch '(\n${pitchParts.join("\n")}\n ))`;
+
+        const funcPitchParts = sequence.map((i) => {
+          const b = blocks[i];
+          const actualNoteCount = b.pitchList.length;
+          const intsParam = b.intervals.length > 0 ? b.intervals.join(" ") : "0";
+          let scaleCall = `(make-scale '${b.root} ${actualNoteCount} :alt '(${intsParam}))`;
+          if (b.reverse) {
+             scaleCall = `(reverse ${scaleCall})`;
+          }
+          let nameLabel = b.name.padEnd(8);
+          // if no notes, just output empty list or omit gracefully; make-scale with 0 fails in lisp usually, but handled by 0 count
+          if (actualNoteCount === 0) {
+              scaleCall = `'()`;
+          }
+          return `                    ${scaleCall} ;; ${nameLabel}`;
+        });
+        document.getElementById("sequenceOMNFunc").textContent =
+          `(setf my-idea\n  (make-omn \n   :length '(\n${lenParts.map(p => "          " + p.trimLeft()).join("\n")}\n   )\n   :pitch (flatten (list \n${funcPitchParts.join("\n")}\n          ))))`;
       }
 
       // ══════════════════════════════════════════
@@ -2019,6 +2043,7 @@
           root: rootNote,
           lengths: lengths,
           pitchList: pl,
+          reverse: false,
           color: overrideColor || getNextColor()
         });
         renderAll();
@@ -2218,6 +2243,7 @@
             root: pRoot,
             lengths,
             pitchList: pl,
+            reverse: reversePitches,
             color: getNextColor()
           });
           if (autoSeq) sequence.push(blocks.length - 1);
@@ -2314,6 +2340,7 @@
             root: pRoot,
             lengths,
             pitchList: pl,
+            reverse: reversePitches,
             color: getNextColor()
           });
           if (autoSeq) sequence.push(blocks.length - 1);
@@ -2382,6 +2409,7 @@
             root: pRoot,
             lengths,
             pitchList: pl,
+            reverse: reversePitches,
             color: getNextColor()
           });
           if (autoSeq) sequence.push(blocks.length - 1);
