@@ -744,6 +744,59 @@
         outline: none;
         cursor: pointer;
       }
+      .rec-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        border: 2px solid var(--danger);
+        background: transparent;
+        color: var(--danger);
+        font-size: 0.65rem;
+        font-family: var(--mono);
+        letter-spacing: 0.05em;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.12s;
+      }
+      .rec-btn:hover {
+        background: rgba(255, 123, 114, 0.15);
+      }
+      .rec-btn.recording {
+        background: var(--danger);
+        color: var(--bg);
+        box-shadow: 0 0 8px rgba(255, 123, 114, 0.5);
+        animation: rec-pulse 1.2s ease-in-out infinite;
+      }
+      @keyframes rec-pulse {
+        0%, 100% { box-shadow: 0 0 8px rgba(255, 123, 114, 0.5); }
+        50% { box-shadow: 0 0 16px rgba(255, 123, 114, 0.9); }
+      }
+      .rec-takes-panel {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 2px;
+        padding: 14px;
+        margin-bottom: 14px;
+      }
+      .rec-take {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+      .rec-take-num {
+        font-size: 0.6rem;
+        color: var(--danger);
+        min-width: 28px;
+        letter-spacing: 0.08em;
+      }
+      .rec-take-omn {
+        font-size: 0.68rem;
+        color: var(--text-dim);
+        word-break: break-all;
+      }
       .copy-btn {
         font-family: var(--mono);
         font-size: 0.68rem;
@@ -876,9 +929,9 @@
             id="tempoSlider"
             min="40"
             max="240"
-            value="120"
+            value="132"
           />
-          <span class="tempo-val" id="tempoVal">120 ♩</span>
+          <span class="tempo-val" id="tempoVal">132 ♩</span>
         </div>
         <select class="waveform-select" id="waveform">
           <option value="sine">sine</option>
@@ -886,6 +939,7 @@
           <option value="sawtooth">sawtooth</option>
           <option value="square">square</option>
         </select>
+        <button class="rec-btn" id="recBtn" title="Toggle Record mode — captures each loop pass as a take">REC</button>
       </div>
 
       <!-- RHYTHM EDITOR -->
@@ -1337,6 +1391,19 @@
           ;; Functional sequence OMN
         </div>
       </div>
+      <!-- RECORDED TAKES -->
+      <div class="rec-takes-panel" id="recTakesPanel" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div class="panel-title" style="margin-bottom:0; color:var(--danger);">RECORDED TAKES</div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span id="recTakesCount" style="font-size:0.65rem; color:var(--text-dim);"></span>
+            <button class="copy-btn" onclick="copyRecordedTakes()">copy OMN</button>
+            <button class="tx-btn" style="border:1px solid var(--border); border-radius:3px; padding:2px 6px;" onclick="clearRecordedTakes()">clear</button>
+          </div>
+        </div>
+        <div id="recTakesList" style="font-size:0.68rem; color:var(--text-dim); margin-bottom:8px; max-height:120px; overflow-y:auto;"></div>
+        <div class="omn-output" id="recTakesOMN" style="min-height:40px;">;; Start loop + REC to capture takes</div>
+      </div>
     </div>
     <div class="status-flash" id="statusFlash"></div>
 
@@ -1410,6 +1477,8 @@
       let audioCtx = null;
       let isPlaying = false;
       let playbackTimeout = null;
+      let isRecording = false;
+      let recordedTakes = [];
 
       // ══════════════════════════════════════════
       // OMN LENGTH CALCULATION with extended notes
@@ -2601,6 +2670,69 @@
       }
 
       // ══════════════════════════════════════════
+      // RECORD MODE
+      // ══════════════════════════════════════════
+      function captureRecordTake() {
+        const { lengths, pitches } = buildOMNForBar(bars[currentBar], rootNote, intervals, false);
+        recordedTakes.push({ lengths: [...lengths], pitches: [...pitches] });
+        renderRecordedTakes();
+      }
+
+      function renderRecordedTakes() {
+        const panel = document.getElementById("recTakesPanel");
+        const list = document.getElementById("recTakesList");
+        const output = document.getElementById("recTakesOMN");
+        const counter = document.getElementById("recTakesCount");
+
+        panel.style.display = "block";
+        counter.textContent = recordedTakes.length + " take" + (recordedTakes.length !== 1 ? "s" : "");
+
+        list.innerHTML = "";
+        recordedTakes.forEach((t, i) => {
+          const row = document.createElement("div");
+          row.className = "rec-take";
+          const num = document.createElement("span");
+          num.className = "rec-take-num";
+          num.textContent = "#" + (i + 1);
+          const omn = document.createElement("span");
+          omn.className = "rec-take-omn";
+          omn.textContent = "((" + t.lengths.join(" ") + ") (" + t.pitches.join(" ") + "))";
+          row.appendChild(num);
+          row.appendChild(omn);
+          list.appendChild(row);
+        });
+        // Scroll to bottom so latest take is visible
+        list.scrollTop = list.scrollHeight;
+
+        if (recordedTakes.length === 0) {
+          output.textContent = ";; Start loop + REC to capture takes";
+          return;
+        }
+        const lenParts = recordedTakes.map(t => "  (" + t.lengths.join(" ") + ")").join("\n");
+        const pitchParts = recordedTakes.map(t => "  (" + t.pitches.join(" ") + ")").join("\n");
+        output.textContent = "(make-omn\n :length '(\n" + lenParts + "\n )\n :pitch '(\n" + pitchParts + "\n ))";
+      }
+
+      function clearRecordedTakes() {
+        recordedTakes = [];
+        document.getElementById("recTakesOMN").textContent = ";; Start loop + REC to capture takes";
+        document.getElementById("recTakesList").innerHTML = "";
+        document.getElementById("recTakesCount").textContent = "";
+        document.getElementById("recTakesPanel").style.display = "none";
+      }
+
+      function copyRecordedTakes() {
+        const text = document.getElementById("recTakesOMN").textContent;
+        navigator.clipboard.writeText(text).then(() => flash("Recorded takes copied"));
+      }
+
+      document.getElementById("recBtn").onclick = function () {
+        isRecording = !isRecording;
+        this.classList.toggle("recording", isRecording);
+        flash(isRecording ? "REC armed — loop to capture" : "REC off");
+      };
+
+      // ══════════════════════════════════════════
       // PLAYBACK
       // ══════════════════════════════════════════
       function getAudioCtx() {
@@ -2749,6 +2881,8 @@
             }
 
             nextPlayTime += duration;
+
+            if (isRecording) captureRecordTake();
 
             if (!document.getElementById("loopToggle").checked) {
               uiTimeouts.push(
