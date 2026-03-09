@@ -1,0 +1,31 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Arial;}}
+\f0\fs24
+\b gen-interleave-mix\b0\par
+\par
+Interleaves two lists A and B. \par
+If one list is shorter, it cycles to match the length of the longer list.\par
+\par
+\b Signature:\b0\par
+\par
+(gen-interleave-mix list-a list-b)\par
+\par
+\b Arguments:\b0\par
+\par
+\b list-a\b0 : (list) The first list to interleave.\par
+\b list-b\b0 : (list) The second list to interleave.\par
+\par
+\b Examples:\b0\par
+\par
+\i ; Repeating a shorter rhythmic pattern\i0\par
+(gen-interleave-mix '(c4 d4 e4 f4) '(p mf))\par
+=> (c4 p d4 mf e4 p f4 mf)\par
+\par
+\i ; Matching a shorter pitch collection to a longer list\i0\par
+(gen-interleave-mix '(1 2) '(a b c d))\par
+=> (1 a 2 b 1 c 2 d)\par
+\par
+\i ; Lists of equal length\i0\par
+(gen-interleave-mix '(a1 a2 a3) '(b1 b2 b3))\par
+=> (a1 b1 a2 b2 a3 b3)\par
+}

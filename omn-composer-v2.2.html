@@ -10,20 +10,20 @@
     />
     <style>
       :root {
-        --bg: #111317;
-        --bg2: #191c21;
-        --bg3: #22262d;
-        --border: #323842;
-        --accent: #5ccbb6;
-        --accent2: #b58fda;
-        --accent3: #58a6ff;
-        --on: #5ccbb6;
-        --rest: #151f25;
-        --rest-border: #213540;
-        --text: #e1e7ef;
-        --text-dim: #8b949e;
-        --danger: #ff7b72;
-        --green: #56d364;
+        --bg:         #f5efe4;
+        --bg2:        #ede4d6;
+        --bg3:        #e0d5c4;
+        --border:     #c4b49a;
+        --accent:     #8b3a1a;
+        --accent2:    #6b4c2a;
+        --accent3:    #a04820;
+        --on:         #8b3a1a;
+        --rest:       #ddd0bc;
+        --rest-border:#c4b49a;
+        --text:       #1e1208;
+        --text-dim:   #6b5a45;
+        --danger:     #a02010;
+        --green:      #3a6e28;
         --mono: "Courier Prime", monospace;
         --display: "Bebas Neue", sans-serif;
       }
@@ -38,6 +38,7 @@
         font-family: var(--mono);
         min-height: 100vh;
         overflow-x: hidden;
+        padding-bottom: 48px;
       }
       body::before {
         content: "";
@@ -47,8 +48,8 @@
           0deg,
           transparent,
           transparent 28px,
-          rgba(92, 203, 182, 0.03) 28px,
-          rgba(92, 203, 182, 0.03) 29px
+          rgba(139, 58, 26, 0.04) 28px,
+          rgba(139, 58, 26, 0.04) 29px
         );
         pointer-events: none;
         z-index: 0;
@@ -139,17 +140,17 @@
       }
       .cell.on {
         background: var(--on);
-        border-color: #79ebd5;
-        box-shadow: 0 0 5px rgba(92, 203, 182, 0.35);
+        border-color: var(--accent3);
+        box-shadow: 0 1px 3px rgba(139, 58, 26, 0.25);
       }
       .cell.off {
         background: var(--rest);
         border-color: var(--rest-border);
       }
       .cell.extended {
-        background: #235d64;
-        border-color: #388f98;
-        box-shadow: 0 0 5px rgba(56, 143, 152, 0.4);
+        background: #c8a878;
+        border-color: #a07840;
+        box-shadow: 0 1px 3px rgba(160, 120, 64, 0.3);
       }
       .cell.playhead {
         outline: 2px solid var(--accent3);
@@ -193,18 +194,40 @@
       .bar-tab {
         font-family: var(--mono);
         font-size: 0.65rem;
-        padding: 3px 8px;
+        padding: 4px 8px 5px;
         border: 1px solid var(--border);
         background: transparent;
         color: var(--text-dim);
         border-radius: 2px;
         cursor: pointer;
         transition: all 0.1s;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
       }
       .bar-tab.active {
         border-color: var(--accent);
         color: var(--accent);
         background: rgba(92, 203, 182, 0.1);
+      }
+      .bar-tab-mini {
+        display: flex;
+        gap: 1.5px;
+        flex-wrap: nowrap;
+      }
+      .bar-tab-dot {
+        width: 4px;
+        height: 4px;
+        border-radius: 1px;
+        background: var(--border);
+        flex-shrink: 0;
+      }
+      .bar-tab-dot.on {
+        background: var(--text-dim);
+      }
+      .bar-tab.active .bar-tab-dot.on {
+        background: var(--accent);
       }
       .bar-tab-del {
         font-size: 0.6rem;
@@ -290,11 +313,11 @@
         transition: 0.2s;
       }
       .toggle-sw input:checked + .toggle-track {
-        background: rgba(56, 143, 152, 0.3);
-        border-color: #388f98;
+        background: rgba(139, 58, 26, 0.2);
+        border-color: var(--accent);
       }
       .toggle-sw input:checked + .toggle-track::after {
-        background: #388f98;
+        background: var(--accent);
         left: 20px;
       }
 
@@ -598,6 +621,55 @@
         background: rgba(88, 166, 255, 0.28);
       }
 
+      .tpl-btn {
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        padding: 5px 12px;
+        background: rgba(180, 120, 255, 0.12);
+        border: 1px solid #b478ff;
+        color: #b478ff;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: all 0.12s;
+        position: relative;
+      }
+      .tpl-btn:hover {
+        background: rgba(180, 120, 255, 0.28);
+      }
+      .tpl-menu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 3px;
+        background: var(--panel);
+        border: 1px solid #b478ff;
+        border-radius: 3px;
+        z-index: 200;
+        min-width: 190px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      }
+      .tpl-menu.open { display: block; }
+      .tpl-menu-item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        padding: 6px 12px;
+        background: none;
+        border: none;
+        color: var(--text);
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .tpl-menu-item:hover { background: rgba(180,120,255,0.15); color: #b478ff; }
+      .tpl-menu-sep {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 2px 0;
+      }
+
       /* SEQUENCE */
       .sequence-slots {
         display: flex;
@@ -761,17 +833,17 @@
         transition: all 0.12s;
       }
       .rec-btn:hover {
-        background: rgba(255, 123, 114, 0.15);
+        background: rgba(160, 32, 16, 0.15);
       }
       .rec-btn.recording {
         background: var(--danger);
         color: var(--bg);
-        box-shadow: 0 0 8px rgba(255, 123, 114, 0.5);
+        box-shadow: 0 0 8px rgba(160, 32, 16, 0.5);
         animation: rec-pulse 1.2s ease-in-out infinite;
       }
       @keyframes rec-pulse {
-        0%, 100% { box-shadow: 0 0 8px rgba(255, 123, 114, 0.5); }
-        50% { box-shadow: 0 0 16px rgba(255, 123, 114, 0.9); }
+        0%, 100% { box-shadow: 0 0 8px rgba(160, 32, 16, 0.5); }
+        50% { box-shadow: 0 0 16px rgba(160, 32, 16, 0.9); }
       }
       .rec-takes-panel {
         background: var(--bg2);
@@ -811,6 +883,65 @@
       .copy-btn:hover {
         background: rgba(75, 200, 123, 0.22);
       }
+
+      /* KEYBOARD CHEATSHEET STRIP */
+      .kbd-strip {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--bg2);
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 0;
+        padding: 7px 18px;
+        z-index: 997;
+        flex-wrap: wrap;
+        row-gap: 4px;
+      }
+      .kbd-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 16px 0 0;
+        margin-right: 16px;
+        border-right: 1px solid var(--border);
+      }
+      .kbd-group:last-child {
+        border-right: none;
+      }
+      .kbd-key {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-bottom-width: 2px;
+        border-radius: 3px;
+        padding: 2px 7px;
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--accent);
+        white-space: nowrap;
+        font-weight: bold;
+      }
+      .kbd-desc {
+        color: var(--text-dim);
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        white-space: nowrap;
+      }
+      /* Key flash indicator in playback bar */
+      .key-action-flash {
+        font-size: 0.65rem;
+        color: var(--accent2);
+        letter-spacing: 0.06em;
+        min-width: 160px;
+        opacity: 0;
+        transition: opacity 0.15s;
+      }
+      .key-action-flash.show { opacity: 1; }
 
       .status-flash {
         position: fixed;
@@ -885,7 +1016,16 @@
             notes</span
           >
         </div>
-        <div style="display:flex; gap:8px;">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <div style="position:relative;">
+            <button class="tpl-btn" onclick="toggleTplMenu(event)">Templates ▾</button>
+            <div class="tpl-menu" id="tplMenu">
+              <div style="padding:4px 12px 2px; font-size:0.6rem; color:var(--text-dim); letter-spacing:0.08em;">PITCH LINE</div>
+              <button class="tpl-menu-item" onclick="loadTemplate('pitchline_1bar')">Pitch Line — 1 bar</button>
+              <button class="tpl-menu-item" onclick="loadTemplate('pitchline_2bars')">Pitch Line — 2 bars</button>
+              <button class="tpl-menu-item" onclick="loadTemplate('pitchline_4bars')">Pitch Line — 4 bars</button>
+            </div>
+          </div>
           <button class="store-btn" onclick="saveConfig()">Save Config</button>
           <button class="copy-btn" onclick="loadConfig()">Load Config</button>
         </div>
@@ -939,7 +1079,12 @@
           <option value="sawtooth">sawtooth</option>
           <option value="square">square</option>
         </select>
+        <select class="waveform-select" id="midiOut" title="MIDI output (IAC Driver)">
+          <option value="">— no MIDI —</option>
+        </select>
+        <button class="tx-btn" id="synthMuteBtn" title="Mute built-in synth" onclick="toggleSynthMute()" style="border:1px solid var(--border); border-radius:3px; padding:2px 8px; font-size:0.68rem;">synth</button>
         <button class="rec-btn" id="recBtn" title="Toggle Record mode — captures each loop pass as a take">REC</button>
+        <span class="key-action-flash" id="keyActionFlash"></span>
       </div>
 
       <!-- RHYTHM EDITOR -->
@@ -1008,6 +1153,8 @@
                 style="margin-left: 4px; width: 36px"
               />
             </button>
+            <button class="tx-btn" onclick="rotateBoth(parseInt(document.getElementById('rotN').value)||2)" style="border-color:var(--accent2); color:var(--accent2)">both →N</button>
+            <button class="tx-btn" onclick="rotateBoth(-(parseInt(document.getElementById('rotN').value)||2))" style="border-color:var(--accent2); color:var(--accent2)">both ←N</button>
             <button class="tx-btn" onclick="rhythmRetrograde()">
               retrograde
             </button>
@@ -1407,6 +1554,20 @@
     </div>
     <div class="status-flash" id="statusFlash"></div>
 
+    <!-- KEYBOARD STRIP -->
+    <div class="kbd-strip">
+      <div class="kbd-group"><span class="kbd-key">Space</span><span class="kbd-desc">play/stop</span></div>
+      <div class="kbd-group"><span class="kbd-key">R</span><span class="kbd-desc">rec</span></div>
+      <div class="kbd-group"><span class="kbd-key">Alt ←→</span><span class="kbd-desc">prev/next bar</span></div>
+      <div class="kbd-group"><span class="kbd-key">←→</span><span class="kbd-desc">rotate rhythm</span></div>
+      <div class="kbd-group"><span class="kbd-key">⇧ ←→</span><span class="kbd-desc">rotate pitch</span></div>
+      <div class="kbd-group"><span class="kbd-key">⇧ ↑↓</span><span class="kbd-desc">transpose</span></div>
+      <div class="kbd-group"><span class="kbd-key">⌘ ←→</span><span class="kbd-desc">rotate both</span></div>
+      <div class="kbd-group"><span class="kbd-key">⌘ ↑</span><span class="kbd-desc">invert</span></div>
+      <div class="kbd-group"><span class="kbd-key">⌘ ↓</span><span class="kbd-desc">retrograde</span></div>
+      <div class="kbd-group"><span class="kbd-key">0</span><span class="kbd-desc">reset bar</span></div>
+    </div>
+
     <script>
       // ══════════════════════════════════════════
       // NOTE HELPERS
@@ -1475,10 +1636,18 @@
       let sequence = [];
       let blockCounter = 1;
       let audioCtx = null;
+      let synthMuted = false;
       let isPlaying = false;
       let playbackTimeout = null;
       let isRecording = false;
       let recordedTakes = [];
+
+      // Snapshot of initial state for reset
+      const initialState = {
+        bars: bars.map(b => ({ cells: [...b.cells], extended: b.extended })),
+        intervals: [...intervals],
+        rootNote,
+      };
 
       // ══════════════════════════════════════════
       // OMN LENGTH CALCULATION with extended notes
@@ -1589,7 +1758,20 @@
         bars.forEach((b, i) => {
           const btn = document.createElement("button");
           btn.className = "bar-tab" + (i === currentBar ? " active" : "");
-          btn.textContent = "Bar " + (i + 1) + " [" + b.cells.length + "]";
+
+          const label = document.createElement("span");
+          label.textContent = "Bar " + (i + 1) + " [" + b.cells.length + "]";
+
+          const mini = document.createElement("div");
+          mini.className = "bar-tab-mini";
+          b.cells.forEach(v => {
+            const dot = document.createElement("div");
+            dot.className = "bar-tab-dot" + (v ? " on" : "");
+            mini.appendChild(dot);
+          });
+
+          btn.appendChild(label);
+          btn.appendChild(mini);
           btn.onclick = () => {
             currentBar = i;
             syncLenInput();
@@ -1978,9 +2160,35 @@
       function rhythmRotateN() {
         rhythmRotate(parseInt(document.getElementById("rotN").value) || 1);
       }
+      function rotateBoth(n) {
+        // Rotate rhythm cells
+        const cells = bars[currentBar].cells;
+        const cLen = cells.length;
+        const cr = ((n % cLen) + cLen) % cLen;
+        bars[currentBar].cells = [...cells.slice(cLen - cr), ...cells.slice(0, cLen - cr)];
+        // Rotate pitch intervals
+        const iLen = intervals.length;
+        if (iLen > 0) {
+          const ir = ((n % iLen) + iLen) % iLen;
+          intervals = [...intervals.slice(iLen - ir), ...intervals.slice(0, iLen - ir)];
+        }
+        renderAll();
+      }
       function rhythmRetrograde() {
         bars[currentBar].cells = [...bars[currentBar].cells].reverse();
         renderAll();
+      }
+      function resetBar() {
+        const snap = initialState.bars[currentBar];
+        if (!snap) return;
+        bars[currentBar].cells = [...snap.cells];
+        bars[currentBar].extended = snap.extended;
+        intervals = [...initialState.intervals];
+        rootNote = initialState.rootNote;
+        document.getElementById("rootNote").value = rootNote;
+        syncLenInput();
+        renderAll();
+        flashKey('0 reset');
       }
       function rhythmComplement() {
         bars[currentBar].cells = bars[currentBar].cells.map((x) => (x ? 0 : 1));
@@ -1999,13 +2207,15 @@
       // ══════════════════════════════════════════
       // PITCH TRANSFORMS
       // ══════════════════════════════════════════
-      function pitchTranspose() {
-        const n = parseInt(document.getElementById("transN").value) || 0;
+      function pitchTransposeBy(n) {
         rootNote = midiToOMN(
           Math.max(36, Math.min(96, noteToMidi(rootNote) + n)),
         );
         document.getElementById("rootNote").value = rootNote;
         renderAll();
+      }
+      function pitchTranspose() {
+        pitchTransposeBy(parseInt(document.getElementById("transN").value) || 0);
       }
       function pitchInvert() {
         const N = intervals.length;
@@ -2648,6 +2858,77 @@
       }
 
       // ══════════════════════════════════════════
+      // BUILT-IN TEMPLATES
+      // ══════════════════════════════════════════
+
+      // pitch-line: f4 d4 a4 cs4 e4 c4 g4 b3 d4 bb3 f4 b3 g4 c4 g4 cs4 e4 a4
+      // root = f4, intervals = (-3 7 -8 3 -4 7 -8 3 -4 7 -6 8 -7 7 -6 3 5)
+      // length-to-binary (32 cells):
+      //   (1 0 1 0 1 1 0 1 0 1 0 1 1 0 1 0  1 0 1 0 1 1 0 1 0 1 0 1 1 0 1 0)
+      const PITCH_LINE_INTERVALS = [-3, 7, -8, 3, -4, 7, -8, 3, -4, 7, -6, 8, -7, 7, -6, 3, 5];
+      const PITCH_LINE_ROOT = "f4";
+      const PITCH_LINE_BINARY_32 = [1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0, 1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0];
+
+      const BUILTIN_TEMPLATES = {
+        // 1 bar: all 32 cells in a single bar
+        pitchline_1bar: {
+          bars: [
+            { cells: [...PITCH_LINE_BINARY_32], extended: false }
+          ],
+          intervals: [...PITCH_LINE_INTERVALS],
+          rootNote: PITCH_LINE_ROOT,
+        },
+        // 2 bars: split into 2 × 16 cells
+        pitchline_2bars: {
+          bars: [
+            { cells: PITCH_LINE_BINARY_32.slice(0, 16), extended: false },
+            { cells: PITCH_LINE_BINARY_32.slice(16, 32), extended: false },
+          ],
+          intervals: [...PITCH_LINE_INTERVALS],
+          rootNote: PITCH_LINE_ROOT,
+        },
+        // 4 bars: split into 4 × 8 cells
+        pitchline_4bars: {
+          bars: [
+            { cells: PITCH_LINE_BINARY_32.slice(0, 8), extended: false },
+            { cells: PITCH_LINE_BINARY_32.slice(8, 16), extended: false },
+            { cells: PITCH_LINE_BINARY_32.slice(16, 24), extended: false },
+            { cells: PITCH_LINE_BINARY_32.slice(24, 32), extended: false },
+          ],
+          intervals: [...PITCH_LINE_INTERVALS],
+          rootNote: PITCH_LINE_ROOT,
+        },
+      };
+
+      function loadTemplate(key) {
+        closeTplMenu();
+        const tpl = BUILTIN_TEMPLATES[key];
+        if (!tpl) return;
+        bars = tpl.bars.map(b => ({ cells: [...b.cells], extended: b.extended }));
+        intervals = [...tpl.intervals];
+        rootNote = tpl.rootNote;
+        currentBar = 0;
+        blocks = [];
+        sequence = [];
+        blockCounter = 1;
+        document.getElementById('rootNote').value = rootNote;
+        syncLenInput();
+        renderAll();
+        flash("Template loaded: " + key.replace(/_/g, ' '));
+      }
+
+      function toggleTplMenu(e) {
+        e.stopPropagation();
+        document.getElementById('tplMenu').classList.toggle('open');
+      }
+
+      function closeTplMenu() {
+        document.getElementById('tplMenu').classList.remove('open');
+      }
+
+      document.addEventListener('click', closeTplMenu);
+
+      // ══════════════════════════════════════════
       // COPY
       // ══════════════════════════════════════════
       function copyOMN() {
@@ -2731,6 +3012,90 @@
         this.classList.toggle("recording", isRecording);
         flash(isRecording ? "REC armed — loop to capture" : "REC off");
       };
+
+      // ══════════════════════════════════════════
+      // MIDI
+      // ══════════════════════════════════════════
+      let midiAccess = null;
+
+      function initMIDI() {
+        if (!navigator.requestMIDIAccess) return;
+        navigator.requestMIDIAccess().then((access) => {
+          midiAccess = access;
+          populateMIDIOutputs();
+          access.onstatechange = populateMIDIOutputs;
+        }).catch(() => {});
+      }
+
+      function populateMIDIOutputs() {
+        const sel = document.getElementById('midiOut');
+        const prev = sel.value;
+        sel.innerHTML = '<option value="">— no MIDI —</option>';
+        if (!midiAccess) return;
+        midiAccess.outputs.forEach((out) => {
+          const opt = document.createElement('option');
+          opt.value = out.id;
+          opt.textContent = out.name;
+          sel.appendChild(opt);
+        });
+        // restore previous selection if still available
+        if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+      }
+
+      function getMIDIOutput() {
+        if (!midiAccess) return null;
+        const id = document.getElementById('midiOut').value;
+        if (!id) return null;
+        return midiAccess.outputs.get(id) || null;
+      }
+
+      // Schedule MIDI notes for a bar. Uses performance.now() timestamps (ms).
+      // audioStartTime: Web Audio ctx.currentTime (seconds) when bar starts.
+      // ctxOrigin: performance.now() equivalent of ctx.currentTime=0, computed once.
+      function scheduleMIDI(output, barObj, pitchRoot, pitchInts, tempo, audioStartTime, ctxOrigin) {
+        const secsPerSixteenth = 60 / tempo / 4;
+        const pitches = generatePitches(pitchRoot, pitchInts, barObj.cells.length + 4);
+        const tokens = binaryToLengthTokens(barObj.cells, barObj.extended);
+
+        const durMap = { s:1, e:2, "e.":3, q:4, "q.":5, h:8, "h.":12, w:16 };
+        function tokSixteenths(dur) {
+          const clean = dur.replace(/^-/, '');
+          if (durMap[clean] !== undefined) return durMap[clean];
+          const m = clean.match(/^(\d+)\/16$/);
+          if (m) return parseInt(m[1]);
+          const m2 = clean.match(/^(\d+)\/(\d+)$/);
+          if (m2) return (parseInt(m2[1]) / parseInt(m2[2])) * 16;
+          return 1;
+        }
+
+        const channel = 0; // MIDI channel 1
+        let pitchIdx = 0;
+        let offsetSecs = 0;
+
+        tokens.forEach((tok) => {
+          const sixteenths = tokSixteenths(tok.dur);
+          const durSecs = sixteenths * secsPerSixteenth;
+          if (!tok.isRest) {
+            const midiNote = pitches[pitchIdx++ % pitches.length];
+            const absTimeSecs = audioStartTime + offsetSecs;
+            const tMs = ctxOrigin + absTimeSecs * 1000;
+            const offMs = tMs + durSecs * 880; // ~88% of note duration
+            output.send([0x90 | channel, midiNote, 80], tMs);
+            output.send([0x80 | channel, midiNote, 0], offMs);
+          }
+          offsetSecs += durSecs;
+        });
+      }
+
+      function toggleSynthMute() {
+        synthMuted = !synthMuted;
+        const btn = document.getElementById('synthMuteBtn');
+        btn.textContent = synthMuted ? 'synth ✕' : 'synth';
+        btn.style.color = synthMuted ? 'var(--danger)' : '';
+        btn.style.borderColor = synthMuted ? 'var(--danger)' : 'var(--border)';
+      }
+
+      initMIDI();
 
       // ══════════════════════════════════════════
       // PLAYBACK
@@ -2819,6 +3184,12 @@
         return t - time; // return precise duration
       }
 
+      // Returns bar duration in seconds without scheduling any audio (used when synth is muted).
+      function calcBarDuration(barObj, tempo) {
+        const secsPerSixteenth = 60 / tempo / 4;
+        return barObj.cells.length * secsPerSixteenth;
+      }
+
       let nextPlayTime = 0;
       let playingSequence = false;
       let seqPos = 0;
@@ -2848,6 +3219,7 @@
 
         // start scheduling slightly in the future
         nextPlayTime = ctx.currentTime + 0.05;
+        const ctxOrigin = performance.now() - ctx.currentTime * 1000;
 
         function scheduler() {
           if (!isPlaying || playingSequence) return;
@@ -2858,14 +3230,11 @@
               document.getElementById("tempoSlider").value,
             );
             const barObj = bars[currentBar];
-            const duration = scheduleBarAudio(
-              ctx,
-              nextPlayTime,
-              barObj,
-              rootNote,
-              intervals,
-              tempo,
-            );
+            const duration = synthMuted
+              ? calcBarDuration(barObj, tempo)
+              : scheduleBarAudio(ctx, nextPlayTime, barObj, rootNote, intervals, tempo);
+            const midiOut = getMIDIOutput();
+            if (midiOut) scheduleMIDI(midiOut, barObj, rootNote, intervals, tempo, nextPlayTime, ctxOrigin);
 
             const secsPerSixteenth = 60 / tempo / 4;
             for (let i = 0; i < barObj.cells.length; i++) {
@@ -2925,6 +3294,7 @@
 
         nextPlayTime = ctx.currentTime + 0.05;
         seqPos = 0;
+        const ctxOrigin = performance.now() - ctx.currentTime * 1000;
 
         function scheduler() {
           if (!isPlaying || !playingSequence) return;
@@ -2967,14 +3337,11 @@
               highlightSequenceSlot(currentSeqPos);
             }
 
-            const duration = scheduleBarAudio(
-              ctx,
-              nextPlayTime,
-              barObj,
-              b.root,
-              b.intervals,
-              tempo,
-            );
+            const duration = synthMuted
+              ? calcBarDuration(barObj, tempo)
+              : scheduleBarAudio(ctx, nextPlayTime, barObj, b.root, b.intervals, tempo);
+            const midiOut = getMIDIOutput();
+            if (midiOut) scheduleMIDI(midiOut, barObj, b.root, b.intervals, tempo, nextPlayTime, ctxOrigin);
             nextPlayTime += duration;
             seqPos++;
           }
@@ -2987,10 +3354,115 @@
         document.getElementById("tempoVal").textContent = this.value + " ♩";
       };
 
+      // ══════════════════════════════════════════
+      // KEY-ACTION FLASH
+      // ══════════════════════════════════════════
+      let keyFlashTimer = null;
+      function flashKey(msg) {
+        const el = document.getElementById('keyActionFlash');
+        el.textContent = msg;
+        el.classList.add('show');
+        if (keyFlashTimer) clearTimeout(keyFlashTimer);
+        keyFlashTimer = setTimeout(() => el.classList.remove('show'), 900);
+      }
+
+      // ══════════════════════════════════════════
+      // KEYBOARD CONTROLS
+      // ══════════════════════════════════════════
       document.addEventListener('keydown', function(e) {
-        if (e.code === 'Space' && e.target === document.body) {
+        // Ignore when typing in an input/select/textarea
+        const tag = document.activeElement && document.activeElement.tagName;
+        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+
+        const cmd = e.metaKey || e.ctrlKey;
+        const shift = e.shiftKey;
+
+        // Space — play/stop
+        if (e.code === 'Space') {
           e.preventDefault();
           document.getElementById('playBtn').click();
+          return;
+        }
+
+        // R — toggle REC
+        if (e.code === 'KeyR' && !cmd && !shift) {
+          e.preventDefault();
+          document.getElementById('recBtn').click();
+          return;
+        }
+
+        // 0 — reset current bar to initial state
+        if (e.code === 'Digit0' && !cmd && !shift) {
+          e.preventDefault();
+          resetBar();
+          return;
+        }
+
+        // Arrow keys
+        if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.code)) {
+          e.preventDefault();
+
+          if (cmd) {
+            // Cmd/Ctrl + Arrow: rotate BOTH or invert/retrograde
+            if (e.code === 'ArrowRight') {
+              rotateBoth(1);
+              flashKey('⌘→ rotate both +1');
+            } else if (e.code === 'ArrowLeft') {
+              rotateBoth(-1);
+              flashKey('⌘← rotate both −1');
+            } else if (e.code === 'ArrowUp') {
+              pitchInvert();
+              flashKey('⌘↑ invert intervals');
+            } else if (e.code === 'ArrowDown') {
+              pitchRetrograde();
+              flashKey('⌘↓ retrograde intervals');
+            }
+          } else if (shift) {
+            // Shift + Arrow: pitch operations
+            if (e.code === 'ArrowRight') {
+              pitchRotate(1);
+              flashKey('⇧→ rotate pitch +1');
+            } else if (e.code === 'ArrowLeft') {
+              pitchRotate(-1);
+              flashKey('⇧← rotate pitch −1');
+            } else if (e.code === 'ArrowUp') {
+              pitchTransposeBy(1);
+              flashKey('⇧↑ transpose +1');
+            } else if (e.code === 'ArrowDown') {
+              pitchTransposeBy(-1);
+              flashKey('⇧↓ transpose −1');
+            }
+          } else if (e.altKey) {
+            // Alt + Arrow: switch bar
+            if (e.code === 'ArrowRight') {
+              if (currentBar < bars.length - 1) {
+                currentBar++;
+                syncLenInput();
+                renderAll();
+                flashKey('alt→ bar ' + (currentBar + 1));
+              } else {
+                flashKey('alt→ (last bar)');
+              }
+            } else if (e.code === 'ArrowLeft') {
+              if (currentBar > 0) {
+                currentBar--;
+                syncLenInput();
+                renderAll();
+                flashKey('alt← bar ' + (currentBar + 1));
+              } else {
+                flashKey('alt← (first bar)');
+              }
+            }
+          } else {
+            // Bare Arrow: rotate rhythm
+            if (e.code === 'ArrowRight') {
+              rhythmRotate(1);
+              flashKey('→ rotate rhythm +1');
+            } else if (e.code === 'ArrowLeft') {
+              rhythmRotate(-1);
+              flashKey('← rotate rhythm −1');
+            }
+          }
         }
       });
 
