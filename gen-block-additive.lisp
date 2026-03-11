@@ -1,5 +1,38 @@
 (in-package :opusmodus)
 
+(defun expand-midi-chord-from-bass (chord &key (up 1) (down 1) (dedupe t) (sort-output t))
+  "Expands a MIDI chord by adding octave doublings of its bass note above and below.
+
+  Args:
+    chord (list): MIDI chord list in low-to-high order.
+    up (integer): Number of octave doublings above the bass note.
+    down (integer): Number of octave doublings below the bass note.
+    dedupe (boolean): If T, remove duplicate pitches.
+    sort-output (boolean): If T, return low-to-high sorted chord.
+
+  Returns:
+    list: Expanded MIDI chord."
+  (if (null chord)
+      chord
+    (let* ((bass (first chord))
+           (down-notes (loop for i from 1 to down collect (- bass (* 12 i))))
+           (up-notes (loop for i from 1 to up collect (+ bass (* 12 i))))
+           (expanded (append down-notes chord up-notes))
+           (maybe-deduped (if dedupe (remove-duplicates expanded :test #'=) expanded)))
+      (if sort-output
+          (sort maybe-deduped #'<)
+        maybe-deduped))))
+
+(defun expand-midi-chord-list-from-bass (chord-list &key (up 1) (down 1) (dedupe t) (sort-output t))
+  "Applies expand-midi-chord-from-bass to each chord in a list."
+  (mapcar #'(lambda (chord)
+              (expand-midi-chord-from-bass chord
+                                           :up up
+                                           :down down
+                                           :dedupe dedupe
+                                           :sort-output sort-output))
+          chord-list))
+
 (defun gen-block-additive (sequence &key (type 'linear) (flat nil) seed lengths pitches (start-count 1) (repeat-last 0) (step-repeat 1) (display-seed t))
   "Generates a Block Additive process (Reich style) by gradually revealing notes from a fixed rhythmic grid.
    Skips steps that only reveal rests, ensuring every output measure adds audible material.
@@ -83,3 +116,15 @@
           (if flat
               (flatten result)
             result)))))))
+
+;; Example:
+;; (setf expanded-chords
+;;       (expand-midi-chord-list-from-bass
+;;        '((69 74 77 81) (70 74 76 81) (67 74 77 81) (69 73 74 79)
+;;          (69 74 77 81) (72 73 76 79) (70 73 76 81) (70 75 76 79)
+;;          (69 74 77 81) (69 72 77 79) (70 74 79 81) (70 73 76 81)
+;;          (67 74 77 82) (69 72 77 84) (70 74 79 81) (73 74 81 82))
+;;        :up 2    ;; add bass +12 and +24
+;;        :down 2  ;; add bass -12 and -24
+;;        :dedupe t
+;;        :sort-output t))

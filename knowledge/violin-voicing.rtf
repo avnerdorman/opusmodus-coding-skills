@@ -1,0 +1,55 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0\fnil Helvetica;}{\f1\fmodern Courier;}}
+\f0\fs24
+\b Violin Voicing Utilities\b0\par
+\par
+This document describes the helper functions in \f1 violin-voicing.lisp\f0  for converting dense harmonic textures into violin-friendly 4-voice chord streams using native Opusmodus functions.\par
+\par
+\b Pipeline\b0\par
+1. Remove duplicate chord pitches with \f1 chord-pitch-unique\f0 .\par
+2. Constrain register with \f1 ambitus-filter\f0  (default \f1 (g3 e6)\f0 ).\par
+3. Constrain span/playability with \f1 ambitus-chord\f0  (default 19 semitones).\par
+4. Apply voice-leading path with \f1 closest-path\f0 , \f1 relative-closest-path\f0 , or \f1 comparative-closest-path\f0 .\par
+5. Optionally insert connective tones with \f1 passing-intervals\f0 .\par
+\par
+\b Primary Function\b0\par
+\f1
+(violin-voicing raw-omn
+                &key
+                  (amb '(g3 e6))
+                  (max-span 19)
+                  (path :closest)
+                  (seed nil)
+                  (enforce-open-string-second-rule t)
+                  (open-strings '(g3 d4 a4 e5))
+                  (passing :none)
+                  (passing-prob 0.45)
+                  (passing-seed nil))
+\f0\par
+\par
+\b Presets\b0\par
+\f1 (violin-voicing-closest src)\f0\par
+\f1 (violin-voicing-relative src :seed 41)\f0\par
+\f1 (violin-voicing-comparative src :seed 41)\f0\par
+\f1 (violin-voicing-balanced src :seed 41)\f0\par
+\par
+\b Balanced Preset\b0\par
+The balanced preset is tuned for harmonic textures:\par
+- path: \f1 :relative\f0\par
+- passing: \f1 :light\f0\par
+- passing-prob: \f1 0.38\f0\par
+- max-span: \f1 19\f0\par
+- open-string second-rule: enabled\par
+\par
+\b Quick Demo\b0\par
+\f1 (violin-voicing-quick-demo)\f0\par
+\par
+This returns seven variants for comparison:\par
+1. Closest\par
+2. Relative\par
+3. Comparative\par
+4. Balanced\par
+5. Closest + light passing\par
+6. Relative + medium passing\par
+7. Comparative + dense passing\par
+}

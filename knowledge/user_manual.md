@@ -15,6 +15,14 @@ This manual documents custom functions and extensions developed for the Opusmodu
     - [gen-phasing](#gen-phasing)
     - [length-to-grid](#length-to-grid)
 
+3.  [Violin Voicing Utilities](#3-violin-voicing-utilities)
+  - [violin-voicing](#violin-voicing)
+  - [violin-voicing-closest](#violin-voicing-closest)
+  - [violin-voicing-relative](#violin-voicing-relative)
+  - [violin-voicing-comparative](#violin-voicing-comparative)
+  - [violin-voicing-balanced](#violin-voicing-balanced)
+  - [violin-voicing-quick-demo](#violin-voicing-quick-demo)
+
 ---
 
 ## 1. Block Additive Process
@@ -497,3 +505,115 @@ Converts a sequence of notes into a grid based on `grid-val`. All notes are quan
 (length-to-grid '(e c4) 1/16)
 ;; Result: ((s c4 -s))
 ```
+
+---
+
+## 3. Violin Voicing Utilities
+
+This section documents the helper functions in `violin-voicing.lisp` for converting dense harmonic textures into violin-friendly 4-voice chord streams.
+
+The pipeline uses native Opusmodus functions:
+
+- `chord-pitch-unique`
+- `ambitus-filter`
+- `ambitus-chord`
+- `closest-path` / `relative-closest-path` / `comparative-closest-path`
+- `passing-intervals` (optional connective tones)
+
+### violin-voicing
+
+Primary configurable function.
+
+**Signature:**
+
+```lisp
+(violin-voicing raw-omn
+                &key
+                  (amb '(g3 e6))
+                  (max-span 19)
+                  (path :closest)
+                  (seed nil)
+                  (enforce-open-string-second-rule t)
+                  (open-strings '(g3 d4 a4 e5))
+                  (passing :none)
+                  (passing-prob 0.45)
+                  (passing-seed nil))
+```
+
+**Options:**
+
+- **path**: `:closest`, `:relative`, `:comparative`, `:none`
+- **passing**: `:none`, `:light`, `:medium`, `:dense`
+- **amb**: violin register bounds (default `(g3 e6)`)
+- **max-span**: max semitone span per chord (default `19`)
+- **enforce-open-string-second-rule**: disallow adjacent seconds unless both pitches are open strings
+
+**Example:**
+
+```lisp
+(setf vv
+      (violin-voicing src
+                      :path :relative
+                      :seed 41
+                      :passing :light
+                      :passing-prob 0.38
+                      :passing-seed 41))
+```
+
+### violin-voicing-closest
+
+Closest-path preset.
+
+```lisp
+(violin-voicing-closest src)
+```
+
+### violin-voicing-relative
+
+Relative-closest-path preset.
+
+```lisp
+(violin-voicing-relative src :seed 41)
+```
+
+### violin-voicing-comparative
+
+Comparative-closest-path preset.
+
+```lisp
+(violin-voicing-comparative src :seed 41)
+```
+
+### violin-voicing-balanced
+
+Balanced preset for harmonic textures: moderate motion, stable voice-leading, subtle connectors.
+
+Settings:
+
+- `:path :relative`
+- `:passing :light`
+- `:passing-prob 0.38`
+- `:max-span 19`
+- second-rule enforcement enabled
+
+```lisp
+(violin-voicing-balanced src :seed 41)
+```
+
+### violin-voicing-quick-demo
+
+Returns a list of ready-made outputs for quick comparison:
+
+1. Closest
+2. Relative
+3. Comparative
+4. Balanced
+5. Closest + light passing
+6. Relative + medium passing
+7. Comparative + dense passing
+
+```lisp
+(violin-voicing-quick-demo)
+```
+
+> **RTF documentation:** `knowledge/violin-voicing.rtf`
