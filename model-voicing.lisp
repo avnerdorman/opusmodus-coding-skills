@@ -30,7 +30,7 @@
     (55 71 74)    (55 63 72)    (55 62 72)    (55 62 71)    (55 61 70)
     (55 60 69)    (55 60 68)    (55 59 67)    (55 65 67)    (60 63 67)))
 
-(defconstant +range-low+  48)   ; C3
+(defconstant +range-low+  55)   ; G3
 (defconstant +range-high+ 96)   ; C7
 
 ;; ── Model analysis ────────────────────────────────────────────────────────────
@@ -132,16 +132,16 @@ naturally produces varied results on different seeds."
                        (apply #'min (mapcar (lambda (q) (abs (- p q))) to-notes)))
                      from-chord)))
 
-(defun mv-score-voicing (chord iv-dist span-mean)
+(defun mv-score-voicing (chord iv-dist span-mean &key (model-weight 1.0) (target-center nil))
   "Score CHORD (sorted MIDI list) by interval match to model and span."
   (let* ((s   (sort (copy-list chord) #'<))
          (n   (length s))
          (ivs (mv-get-intervals s))
          (sc  0.0))
-    ;; 1. Interval frequency reward
+    ;; 1. Interval frequency reward (scaled by model-weight)
     (dolist (iv ivs)
       (let ((freq (or (cdr (assoc iv iv-dist)) 0)))
-        (incf sc (* freq 100)))
+        (incf sc (* freq 100 model-weight)))
       (when (<= iv 2) (decf sc 40))
       (when (> iv 12) (decf sc (* (- iv 12) 3.0))))
     ;; 2. Span similarity to model mean
@@ -153,6 +153,11 @@ naturally produces varied results on different seeds."
       (let ((bottom-iv (- (nth 1 s) (nth 0 s)))
             (top-iv    (- (nth (1- n) s) (nth (- n 2) s))))
         (when (>= bottom-iv top-iv) (incf sc 8))))
+    ;; 4. Register: penalise deviation from input chord's register
+    (when target-center
+      (let* ((center (/ (apply #'+ s) n))
+             (dev    (abs (- center target-center))))
+        (decf sc (* dev 1.5))))
     sc))
 
 (defun mv-interval-distribution (model)
@@ -166,7 +171,8 @@ naturally produces varied results on different seeds."
     (mapcar (lambda (e) (cons (car e) (/ (cdr e) total))) counts)))
 
 (defun mv-best-voicing (pcs iv-dist span-mean
-                        &key prev (n-voices 4) (vl-weight 0.15))
+                        &key prev (n-voices 4) (vl-weight 0.15)
+                             (model-weight 1.0) (target-center nil))
   "Search all octave combinations of PCS, return highest scoring voicing."
   (let* (;; Fill to n-voices
          (pcs (cond ((>= (length pcs) n-voices) (subseq pcs 0 n-voices))
@@ -186,7 +192,9 @@ naturally produces varied results on different seeds."
                    (let ((notes (sort (copy-list current) #'<)))
                      (when (and (= (length (remove-duplicates notes)) (length notes))
                                 (<= (- (car (last notes)) (car notes)) 24))
-                       (let* ((sc      (mv-score-voicing notes iv-dist span-mean))
+                       (let* ((sc      (mv-score-voicing notes iv-dist span-mean
+                                                         :model-weight model-weight
+                                                         :target-center target-center))
                               (vl-cost (if prev (mv-voice-leading-cost prev notes) 0))
                               (total   (- sc (* vl-cost vl-weight))))
                          (when (> total best-sc)
@@ -200,25 +208,26 @@ naturally produces varied results on different seeds."
 
 (defun run-model-voicing (&key (polish t) (verbose t)
                                (n-voices 4) (blend 1.0) (vl-weight 0.15)
-                               (seed nil))
+                               (model-weight 1.0) (seed nil))
   "Re-voice INPUT-CHORDS-MIDI using MODEL-MIDI as a style reference.
 Sets global VOICED-CHORDS to the resulting Opusmodus pitch list.
 
 Key parameters:
-  :blend      — probability of substituting each chord's PCs toward the model (default 1.0)
-                0.0 = no chords changed, 0.5 = ~half changed, 1.0 = all changed
-                when substituted, closer model PC-sets are chosen more often
-  :n-voices   — 3 or 4 voices (default 4)
-  :vl-weight  — voice-leading smoothness (default 0.15, higher = smoother)
-  :seed       — integer for reproducible results, NIL = different each time
-  :polish     — apply final closest-path pass (default T)
-  :verbose    — print per-chord output (default T)
+  :blend        — probability of substituting each chord's PCs toward the model (default 1.0)
+                  0.0 = no chords changed, 0.5 = ~half changed, 1.0 = all changed
+  :model-weight — how strongly to reward model intervals in voicing search (default 1.0)
+                  0.0 = ignore model intervals entirely, 2.0 = strongly enforce quartal style
+  :n-voices     — 3 or 4 voices (default 4)
+  :vl-weight    — voice-leading smoothness (default 0.15, higher = smoother)
+  :seed         — integer for reproducible results, NIL = different each time
+  :polish       — apply final closest-path pass (default T)
+  :verbose      — print per-chord output (default T)
 
 Examples:
-  (run-model-voicing :seed 42)               ; reproducible
-  (run-model-voicing :blend 0.5 :seed 7)     ; partial substitution
-  (run-model-voicing :blend 0.0)             ; octave-only, no PC change
-  (run-model-voicing :n-voices 3 :seed 23)   ; 3-voice output"
+  (run-model-voicing :seed 42)                          ; reproducible, full model
+  (run-model-voicing :blend 0.5 :model-weight 0.5)      ; gentler model influence
+  (run-model-voicing :blend 0.0)                        ; octave-only, no PC change
+  (run-model-voicing :n-voices 3 :model-weight 2.0)     ; strong model, 3 voices"
   (let* ((seed          (or seed (random 100000)))
          (iv-dist       (progn (rnd-seed seed) (mv-interval-distribution model-midi)))
          (model-pc-sets (mv-model-pc-sets model-midi)))
@@ -232,12 +241,15 @@ Examples:
       (let ((raw-results nil)
             (prev        nil))
         (dolist (chord input-chords-midi)
-          (let* ((target-pcs (mv-select-pc-set chord model-pc-sets blend n-voices)))
+          (let* ((target-pcs    (mv-select-pc-set chord model-pc-sets blend n-voices))
+                 (target-center (/ (apply #'+ chord) (length chord))))
             (multiple-value-bind (voicing sc)
                 (mv-best-voicing target-pcs iv-dist span-mean
                                  :prev prev
                                  :n-voices n-voices
-                                 :vl-weight vl-weight)
+                                 :vl-weight vl-weight
+                                 :model-weight model-weight
+                                 :target-center target-center)
               (let* ((v   (or voicing (sort (copy-list chord) #'<)))
                      (ivs (mv-get-intervals v))
                      (vl  (if prev (mv-voice-leading-cost prev v) 0)))
@@ -260,8 +272,8 @@ Examples:
 
 ;; ── Run ───────────────────────────────────────────────────────────────────────
 ;; Load the file, then call manually:
-;;   (run-model-voicing :seed 42)                       ; reproducible, full substitution
-;;   (run-model-voicing :blend 0.5 :seed 7)             ; partial — closer matches more likely
-;;   (run-model-voicing :blend 0.0)                     ; octave-only, no PC change
-;;   (run-model-voicing :n-voices 3 :seed 23)           ; 3-voice output
-;;   (run-model-voicing :vl-weight 0.5 :seed 42)        ; smoother voice leading
+;;   (run-model-voicing :seed 42)                              ; reproducible, full model
+;;   (run-model-voicing :blend 0.5 :model-weight 0.5 :seed 7) ; gentler substitution + weaker model pull
+;;   (run-model-voicing :blend 0.0)                            ; octave-only, no PC change
+;;   (run-model-voicing :n-voices 3 :model-weight 2.0)         ; strong quartal, 3 voices
+;;   (run-model-voicing :model-weight 0.0 :blend 0.0)          ; purely register/span, no model at all
