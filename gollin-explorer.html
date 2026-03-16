@@ -183,7 +183,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;heigh
         <button class="tl-add" style="color:var(--blue)" onclick="deriveShapes()">Derive from cycle</button>
       </div>
       <div id="derivePanel" style="display:none;margin-top:6px;padding:8px;background:var(--surface2);border:1px solid var(--border);font-size:9px;line-height:1.7">
-        <div style="color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Derived shapes <span style="color:var(--amber);cursor:pointer" onclick="document.getElementById('derivePanel').style.display='none'">x close</span></div>
+        <div style="color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Derived shapes
+          <label style="margin-left:10px;cursor:pointer;color:var(--green);font-size:9px;text-transform:none;letter-spacing:0"><input type="checkbox" id="deriveFilterGreen" style="accent-color:var(--green);vertical-align:middle" onchange="deriveShapes()"> practical only (&le;15st)</label>
+          <span style="color:var(--amber);cursor:pointer;margin-left:8px" onclick="document.getElementById('derivePanel').style.display='none'">x close</span>
+        </div>
         <div id="deriveResults"></div>
       </div>
     </div>
@@ -540,18 +543,25 @@ function _deriveShapesInner(results){
         templates.push({name:'contrary', ivs:si.map((v,i)=>i%2===0?v+12:v-12)});
 
         const dirLabel=dir.label==='inv'?' <span style="color:var(--green)">inv</span>':'';
-        html+=`<div style="margin-top:3px;padding:2px 0;border-top:1px solid var(--border)">`;
-        html+=`<span style="color:var(--dim)">[${mi.join(',')}]${dirLabel}</span><br>`;
-        for(const t of templates){
-          const ivStr=t.ivs.join(', ');
-          // compute range
+        const filterGreen=document.getElementById('deriveFilterGreen')&&document.getElementById('deriveFilterGreen').checked;
+        // Pre-filter: check if any template passes
+        const filteredTemplates=templates.map(t=>{
           const pts=[0];let c=0;
           t.ivs.forEach(v=>{c+=v;pts.push(c);});
           const range=Math.max(...pts)-Math.min(...pts);
-          const rangeColor=range<=15?'var(--green)':range<=20?'var(--amber)':'var(--red)';
-          html+=`<button class="pchip" style="font-size:8px;padding:1px 5px;margin:1px" onclick="addDerivedShape('${ivStr}')">${t.name} [${t.ivs.join(',')}] <span style="color:${rangeColor}">${range}st</span></button> `;
+          return{...t,range};
+        }).filter(t=>!filterGreen||t.range<=15);
+
+        if(filteredTemplates.length){
+          html+=`<div style="margin-top:3px;padding:2px 0;border-top:1px solid var(--border)">`;
+          html+=`<span style="color:var(--dim)">[${mi.join(',')}]${dirLabel}</span><br>`;
+          for(const t of filteredTemplates){
+            const ivStr=t.ivs.join(', ');
+            const rangeColor=t.range<=15?'var(--green)':t.range<=20?'var(--amber)':'var(--red)';
+            html+=`<button class="pchip" style="font-size:8px;padding:1px 5px;margin:1px" onclick="addDerivedShape('${ivStr}')">${t.name} [${t.ivs.join(',')}] <span style="color:${rangeColor}">${t.range}st</span></button> `;
+          }
+          html+=`</div>`;
         }
-        html+=`</div>`;
       }
 
     }
