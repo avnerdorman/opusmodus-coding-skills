@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gollin Cycle Explorer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
+:root {
+  --bg:#0c0c10;--surface:#111116;--surface2:#17171e;--surface3:#1d1d26;
+  --border:#232330;--border2:#303040;--text:#b0b0c8;--dim:#505068;--bright:#dcdcf0;
+  --amber:#c89a50;--amber2:#8a6830;--blue:#6090c0;--green:#60a870;--red:#b86060;
+  --purple:#9070b0;
+  --mono:'IBM Plex Mono',monospace;--serif:'Cormorant Garamond',Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12px;}
+.hdr{display:flex;align-items:center;gap:14px;padding:9px 18px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;height:48px;}
+.hdr-title{font-family:var(--serif);font-size:21px;font-weight:300;color:var(--bright);letter-spacing:0.03em;}
+.hdr-sep{color:var(--border2);}
+.hdr-sub{font-size:9px;color:var(--dim);letter-spacing:0.12em;text-transform:uppercase;}
+.hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.pill{font-size:9px;letter-spacing:0.08em;padding:3px 9px;border:1px solid var(--border2);color:var(--dim);background:none;font-family:var(--mono);cursor:pointer;transition:all .15s;text-transform:uppercase;}
+.pill:hover,.pill.on{color:var(--amber);border-color:var(--amber2);}
+.status-lbl{font-size:9px;letter-spacing:0.08em;color:var(--dim);padding:3px 9px;border:1px solid var(--border);}
+.status-lbl.ok{color:var(--green);border-color:#2a4a2a;background:#080f08;}
+.status-lbl.err{color:var(--red);border-color:#4a2020;background:#0f0808;}
+.app{display:grid;grid-template-columns:320px 1fr 300px;height:calc(100vh - 48px);overflow:hidden;}
+.col{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;}
+.col:last-child{border-right:none;}
+.col-hdr{padding:7px 13px;border-bottom:1px solid var(--border);background:var(--surface);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.dot{width:5px;height:5px;border-radius:50%;}
+.col-body{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;}
+.col-body::-webkit-scrollbar{width:3px;}
+.col-body::-webkit-scrollbar-thumb{background:var(--border2);}
+.sec{padding:11px 13px;border-bottom:1px solid var(--border);}
+.sec-lbl{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;}
+.sec-lbl em{color:var(--amber);font-style:normal;font-size:10px;font-weight:500;}
+.iv-wrap{display:flex;gap:4px;align-items:center;flex-wrap:wrap;}
+.iv-inp{width:44px!important;font-size:13px!important;text-align:center;background:var(--surface3);border:1px solid var(--border2);color:var(--bright);font-family:var(--mono);padding:5px 4px;outline:none;transition:border-color .15s;}
+.iv-inp:focus{border-color:var(--amber);}
+.iv-sep{color:var(--dim);font-size:13px;}
+.iconbtn{background:var(--surface3);border:1px solid var(--border2);color:var(--dim);font-family:var(--mono);font-size:13px;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.iconbtn.add:hover{color:var(--green);border-color:var(--green);}
+.iconbtn.del:hover{color:var(--red);border-color:var(--red);}
+input[type=number],input[type=text],select{background:var(--surface3);border:1px solid var(--border2);color:var(--bright);font-family:var(--mono);font-size:12px;padding:5px 7px;outline:none;transition:border-color .15s;}
+input[type=number]:focus,input[type=text]:focus,select:focus{border-color:var(--amber);}
+select{cursor:pointer;}
+select option{background:var(--surface2);}
+input[type=range]{-webkit-appearance:none;width:100%;height:2px;background:var(--border2);outline:none;cursor:pointer;margin:5px 0;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--amber);cursor:pointer;}
+.preset-row{display:flex;gap:5px;flex-wrap:wrap;}
+.pchip{font-size:9px;padding:3px 8px;border:1px solid var(--border2);color:var(--dim);cursor:pointer;transition:all .15s;background:var(--surface3);font-family:var(--mono);letter-spacing:0.04em;}
+.pchip:hover{color:var(--amber);border-color:var(--amber2);background:#1a1200;}
+.gen-btn{width:100%;padding:10px;background:var(--amber);border:none;color:#080500;font-family:var(--mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;font-weight:500;cursor:pointer;transition:background .15s;}
+.gen-btn:hover{background:#d8aa60;}
+.gen-btn:active{background:#a07830;}
+.irow{display:flex;gap:5px;align-items:center;flex-wrap:wrap;}
+.tl-row{display:flex;align-items:center;gap:5px;padding:5px 7px;background:var(--surface3);border:1px solid var(--border);margin-bottom:3px;flex-wrap:wrap;}
+.tl-lbl{font-size:11px;color:var(--amber);font-weight:500;min-width:16px;}
+.tl-inp{width:38px!important;font-size:11px!important;padding:2px 4px!important;background:var(--surface2)!important;}
+.tl-sep{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:0.08em;}
+.tl-del{background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:0 2px;transition:color .15s;}
+.tl-del:hover{color:var(--red);}
+.tl-add{display:flex;align-items:center;gap:4px;color:var(--dim);cursor:pointer;font-size:10px;padding:3px 0;background:none;border:none;font-family:var(--mono);letter-spacing:0.06em;transition:color .15s;text-transform:uppercase;}
+.tl-add:hover{color:var(--green);}
+.clock-wrap{padding:14px;display:flex;flex-direction:column;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface);}
+.clock-svg{width:210px;height:210px;}
+.clock-legend{display:flex;gap:12px;margin-top:6px;}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:8px;letter-spacing:0.08em;color:var(--dim);text-transform:uppercase;}
+.legend-dot{width:6px;height:6px;border-radius:50%;}
+.res-hdr{padding:7px 13px;border-bottom:1px solid var(--border);background:var(--surface);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.res-count{color:var(--amber);font-size:10px;font-weight:500;}
+.res-scroll{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;}
+.res-scroll::-webkit-scrollbar{width:3px;}
+.res-scroll::-webkit-scrollbar-thumb{background:var(--border2);}
+.gcard{padding:7px 13px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;display:flex;align-items:center;gap:8px;}
+.gcard:hover{background:var(--surface2);}
+.gcard.playing{background:#18140a;}
+.gcard.highlighted{background:#0a130a;}
+.gcard-idx{font-size:9px;color:var(--dim);min-width:18px;}
+.gcard-pitches{color:var(--bright);font-size:11px;letter-spacing:0.03em;}
+.gcard-pcs{font-size:9px;color:var(--dim);font-style:italic;}
+.gcard-play{background:none;border:1px solid var(--border2);color:var(--dim);font-size:10px;padding:2px 7px;cursor:pointer;font-family:var(--mono);transition:all .15s;flex-shrink:0;}
+.gcard-play:hover{color:var(--amber);border-color:var(--amber2);}
+.gcard.playing .gcard-play{color:var(--amber);border-color:var(--amber2);}
+.no-results{padding:24px 13px;color:var(--dim);font-size:11px;font-style:italic;}
+.transport{padding:10px 13px;border-top:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.tbtn{background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:10px;padding:5px 12px;cursor:pointer;transition:all .15s;letter-spacing:0.06em;}
+.tbtn:hover{border-color:var(--amber2);color:var(--amber);}
+.tbtn.playing{background:#1e1400;border-color:var(--amber2);color:var(--amber);}
+.tbtn.stop:hover{color:var(--red);border-color:var(--red);}
+.transport-tempo{display:flex;align-items:center;gap:6px;color:var(--dim);font-size:10px;}
+.transport-tempo input[type=range]{width:80px;}
+.tempo-val{color:var(--amber);min-width:28px;}
+.output-area{padding:10px 13px;border-bottom:1px solid var(--border);}
+.out-lbl{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;}
+.out-box{background:var(--surface3);border:1px solid var(--border);padding:8px;min-height:50px;max-height:130px;overflow-y:auto;font-size:10px;line-height:1.6;color:var(--green);white-space:pre-wrap;word-break:break-all;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;}
+.out-box::-webkit-scrollbar{width:3px;}
+.out-box::-webkit-scrollbar-thumb{background:var(--border2);}
+.out-box.amber{color:var(--amber);}
+.out-box.blue{color:var(--blue);}
+.btn{background:none;border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:10px;letter-spacing:0.06em;padding:5px 11px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
+.btn:hover{border-color:var(--text);color:var(--bright);}
+.btn.primary{background:var(--amber);border-color:var(--amber);color:#0a0600;font-weight:500;}
+.btn.primary:hover{background:#d8aa60;}
+.btn.sm{padding:3px 8px;font-size:9px;}
+.btn-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;}
+.theory-panel{padding:10px 13px;font-size:10px;line-height:1.8;}
+.theory-panel.hidden{display:none;}
+.theory-row{display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:3px 0;}
+.theory-key{color:var(--dim);}
+.theory-val{color:var(--blue);font-weight:500;}
+.theory-title{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);padding:6px 0 4px;}
+.warn{font-size:10px;color:var(--red);padding:4px 0;}
+/* Shape editor */
+.shape-card{padding:6px 10px;border:1px solid var(--border);background:var(--surface3);margin-bottom:4px;}
+.shape-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
+.shape-name{font-size:10px;color:var(--amber);font-weight:500;}
+.shape-info{font-size:9px;color:var(--dim);margin-top:2px;}
+.shape-del{background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;transition:color .15s;}
+.shape-del:hover{color:var(--red);}
+/* Path table — the main event */
+.pt-row{display:flex;align-items:center;gap:3px;padding:4px 5px;background:var(--surface3);border:1px solid var(--border);margin-bottom:2px;font-size:10px;min-height:28px;}
+.pt-row:hover{border-color:var(--border2);}
+.pt-row .pt-n{color:var(--dim);min-width:14px;font-size:8px;text-align:right;margin-right:2px;}
+.pt-row .pt-pc{color:var(--amber);font-weight:500;min-width:22px;font-size:11px;}
+.pt-row .pt-lbl{color:var(--dim);font-size:8px;min-width:20px;}
+.pt-row input[type=number]{width:32px;font-size:10px;padding:1px 3px;text-align:center;}
+.pt-row select{font-size:10px;padding:1px 3px;width:auto;min-width:40px;}
+.pt-del{background:none;border:none;color:var(--dim);cursor:pointer;font-size:10px;transition:color .15s;margin-left:auto;padding:0 3px;}
+.pt-del:hover{color:var(--red);}
+.pt-dup{background:none;border:none;color:var(--dim);cursor:pointer;font-size:9px;transition:color .15s;padding:0 3px;}
+.pt-dup:hover{color:var(--green);}
+.pt-tools{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div>
+    <div class="hdr-title">Gollin Cycle Explorer</div>
+    <div class="hdr-sub">Multi-aggregate cycles &amp; surface gestures</div>
+  </div>
+  <div class="hdr-sep">|</div>
+  <div id="cycleInfo" class="hdr-sub">—</div>
+  <div class="hdr-right">
+    <div id="statusLbl" class="status-lbl">—</div>
+    <button class="pill" id="theoryToggle" onclick="toggleTheory()">Theory</button>
+  </div>
+</div>
+
+<div class="app">
+
+<!-- LEFT: CONTROLS -->
+<div class="col">
+  <div class="col-hdr"><span class="dot" style="background:var(--amber)"></span>Cycle &amp; Shapes</div>
+  <div class="col-body">
+    <div class="sec">
+      <div class="sec-lbl">Generating intervals <em id="ivSum">—</em></div>
+      <div class="iv-wrap" id="ivWrap"></div>
+      <div id="ivWarn" class="warn" style="display:none"></div>
+      <div style="margin-top:6px">
+        <div class="preset-row">
+          <button class="pchip" onclick="loadPreset([3,5,3])">(3,5,3)</button>
+          <button class="pchip" onclick="loadPreset([3,1,3])">(3,1,3)</button>
+          <button class="pchip" onclick="loadPreset([4,4,3])">(4,4,3)</button>
+          <button class="pchip" onclick="loadPreset([8,8,1])">(8,8,1)</button>
+          <button class="pchip" onclick="loadPreset([2,3])">(2,3)</button>
+          <button class="pchip" onclick="loadPreset([5,7])">(5,7)</button>
+        </div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-lbl">Root <em id="rootVal">0 = C</em></div>
+      <input type="range" id="rootSlider" min="0" max="11" value="0" oninput="onRootChange(this.value)">
+    </div>
+    <div class="sec">
+      <div class="sec-lbl">Gesture shapes <em style="font-style:italic;color:var(--dim);font-size:9px;font-weight:400">interval patterns</em></div>
+      <div id="shapesContainer"></div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+        <button class="tl-add" onclick="addShape()">+ Add shape</button>
+        <span style="color:var(--border2)">|</span>
+        <button class="tl-add" style="color:var(--blue)" onclick="deriveShapes()">Derive from cycle</button>
+      </div>
+      <div id="derivePanel" style="display:none;margin-top:6px;padding:8px;background:var(--surface2);border:1px solid var(--border);font-size:9px;line-height:1.7">
+        <div style="color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Derived shapes <span style="color:var(--amber);cursor:pointer" onclick="document.getElementById('derivePanel').style.display='none'">x close</span></div>
+        <div id="deriveResults"></div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-lbl">Register center <em id="regVal">F#3</em></div>
+      <input type="range" id="regSlider" min="36" max="84" value="54" oninput="onRegChange(this.value)">
+    </div>
+    <div class="sec">
+      <div class="sec-lbl">Voicing</div>
+      <select id="voicingPreset" onchange="scheduleRegen()" style="width:100%">
+        <option value="raw" selected>Raw — as generated</option>
+        <option value="close">Close position</option>
+        <option value="spread">Spread (0,2,1,3)</option>
+      </select>
+    </div>
+    <div class="sec">
+      <div class="irow" style="gap:12px">
+        <div><div class="sec-lbl">Note value</div>
+        <div class="irow" style="gap:8px">
+          <label style="display:flex;align-items:center;gap:3px;color:var(--dim);font-size:10px;cursor:pointer"><input type="radio" name="notelen" value="1/16" style="accent-color:var(--amber)"> 1/16</label>
+          <label style="display:flex;align-items:center;gap:3px;color:var(--dim);font-size:10px;cursor:pointer"><input type="radio" name="notelen" value="1/8" checked style="accent-color:var(--amber)"> 1/8</label>
+          <label style="display:flex;align-items:center;gap:3px;color:var(--dim);font-size:10px;cursor:pointer"><input type="radio" name="notelen" value="1/4" style="accent-color:var(--amber)"> 1/4</label>
+        </div></div>
+        <div><div class="sec-lbl">Gest/bar</div>
+        <input type="number" id="gpbInput" value="2" min="1" max="8" style="width:40px" oninput="scheduleRegen()"></div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-lbl">Presets</div>
+      <div class="preset-row">
+        <button class="pchip" style="border-color:var(--amber2);color:var(--amber)" onclick="loadBartok('m1-4')">Bartok M1-4</button>
+        <button class="pchip" style="border-color:var(--amber2);color:var(--amber)" onclick="loadBartok('m1-8')">Bartok M1-8</button>
+        <button class="pchip" style="border-color:var(--amber2);color:var(--amber)" onclick="loadBartok('m5-8')">Bartok M5-8</button>
+      </div>
+      <div id="presetInfo" style="font-size:9px;color:var(--dim);margin-top:4px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CENTER: PATH TABLE + RESULTS -->
+<div class="col">
+  <div class="col-hdr"><span class="dot" style="background:var(--purple)"></span>Path table <span style="color:var(--dim);margin-left:4px" id="pathCount">0 gestures</span></div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="flex:0 0 auto;padding:6px 10px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;gap:3px;flex-wrap:wrap;align-items:center;">
+      <div class="pt-tools">
+        <button class="tl-add" onclick="addPathRow()">+ Add</button>
+        <button class="tl-add" onclick="autoFillPath()" style="color:var(--blue)">Auto-fill</button>
+        <span class="tl-sep" style="margin:0 4px">|</span>
+        <span class="tl-sep">start:</span>
+        <input type="number" id="afStart" value="8" min="0" max="99" style="width:34px;font-size:10px;padding:2px 3px">
+        <span class="tl-sep">step:</span>
+        <input type="number" id="afStep" value="-4" min="-18" max="18" style="width:34px;font-size:10px;padding:2px 3px">
+        <span class="tl-sep">count:</span>
+        <input type="number" id="afCount" value="8" min="1" max="64" style="width:34px;font-size:10px;padding:2px 3px">
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;" id="pathTableScroll">
+      <div id="pathTable"></div>
+    </div>
+    <div style="flex:0 0 auto;padding:8px 13px;border-top:1px solid var(--border);background:var(--surface)">
+      <button class="gen-btn" onclick="generate()">Generate</button>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT: CLOCK + OUTPUT -->
+<div class="col">
+  <div class="col-hdr"><span class="dot" style="background:var(--green)"></span>Output</div>
+  <div class="col-body">
+    <div class="clock-wrap">
+      <svg id="clockSvg" class="clock-svg" viewBox="0 0 210 210"></svg>
+      <div class="clock-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>cycle</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>gesture</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#7ab0c8"></div>both</div>
+      </div>
+    </div>
+
+    <div id="theoryPanel" class="theory-panel hidden">
+      <div class="theory-title">Cycle analysis</div>
+      <div class="theory-row"><span class="theory-key">Cycle length</span><span class="theory-val" id="tLen">—</span></div>
+      <div class="theory-row"><span class="theory-key">Coprime</span><span class="theory-val" id="tCoprime">—</span></div>
+      <div class="theory-row"><span class="theory-key">Distribution</span><span class="theory-val" id="tDist">—</span></div>
+      <div class="theory-row"><span class="theory-key">Max safe span</span><span class="theory-val" id="tSafe">—</span></div>
+      <div class="theory-row"><span class="theory-key">Type</span><span class="theory-val" id="tType">—</span></div>
+      <div style="height:1px;background:var(--border);margin:6px 0"></div>
+    </div>
+
+    <div class="res-hdr">
+      <span class="dot" style="background:var(--green)"></span>
+      Gestures — <span class="res-count" id="resCount">0</span>
+      <span style="color:var(--dim);margin-left:4px">click to audition</span>
+    </div>
+    <div class="res-scroll" id="gestureList" style="max-height:180px"></div>
+    <div class="transport">
+      <div style="display:flex;gap:6px;">
+        <button class="tbtn" id="playBtn" onclick="playAll()">Play All</button>
+        <button class="tbtn stop" onclick="stopAll()">Stop</button>
+      </div>
+      <div class="transport-tempo">
+        BPM:<input type="range" id="tempoSlider" min="40" max="300" value="264" oninput="onTempoChange(this.value)">
+        <span class="tempo-val" id="tempoVal">264</span>
+      </div>
+    </div>
+
+    <div class="output-area">
+      <div class="out-lbl">OMN</div>
+      <div class="out-box" id="omnOut">—</div>
+      <div class="btn-row">
+        <button class="btn sm" onclick="copyOMN()">Copy OMN</button>
+        <button class="btn primary sm" onclick="exportMusicXML()">Download .xml</button>
+      </div>
+    </div>
+
+    <div class="output-area">
+      <div class="out-lbl">Cycle (1st aggregate)</div>
+      <div class="out-box amber" id="cycleOut" style="min-height:30px">—</div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ─── CONSTANTS ───
+const PC=['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+const OMN_N=['c','cs','d','eb','e','f','fs','g','ab','a','bb','b'];
+function pcName(pc){return PC[((pc%12)+12)%12];}
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a;}
+function coprime(a,b){return gcd(a,b)===1;}
+function midiToOMN(m){return OMN_N[((m%12)+12)%12]+(Math.floor(m/12)-1);}
+function midiToDisplay(m){return PC[((m%12)+12)%12]+(Math.floor(m/12)-1);}
+
+// ─── CYCLE ───
+function genCycle(rootPc,intervals){
+  const root=((rootPc%12)+12)%12;
+  const n=intervals.length, sum=intervals.reduce((a,b)=>a+b,0);
+  if(!coprime(((sum%12)+12)%12,12))return null;
+  const result=[];let cur=root;
+  for(let i=0;i<12*n;i++){result.push(((cur%12)+12)%12);cur+=intervals[i%n];}
+  return result;
+}
+function getDistVec(cycle){
+  const t=cycle[0],pos=[];
+  cycle.forEach((pc,i)=>{if(pc===t)pos.push(i);});
+  if(pos.length<2)return[cycle.length];
+  const d=[];
+  for(let i=0;i<pos.length-1;i++)d.push(pos[i+1]-pos[i]);
+  d.push(cycle.length-pos[pos.length-1]+pos[0]);
+  return d;
+}
+
+// ─── GESTURE ───
+function parseAlt(str){return str.replace(/,/g,' ').trim().split(/\s+/).map(s=>parseInt(s,10)).filter(n=>!isNaN(n));}
+function gestureFromMidi(startMidi,alts){const p=[startMidi];let c=startMidi;for(const a of alts){c+=a;p.push(c);}return p;}
+function validateGesture(arr,cycle){const cs=new Set(cycle);return arr.every(m=>cs.has(((m%12)+12)%12));}
+function findClosestMidi(pc,target){
+  let best=null;
+  for(let o=0;o<9;o++){const m=o*12+pc;if(m>=21&&m<=108&&(best===null||Math.abs(m-target)<Math.abs(best-target)))best=m;}
+  return best;
+}
+function applyVoicing(raw,type){
+  const s=[...raw].sort((a,b)=>a-b),n=s.length;
+  if(type==='spread'&&n>=4)return[s[0],s[2],s[1],s[3]].concat(s.slice(4));
+  if(type==='close')return s;
+  return raw;
+}
+function normalOrder(pcs){
+  const u=[...new Set(pcs.map(p=>((p%12)+12)%12))].sort((a,b)=>a-b);
+  if(!u.length)return[];
+  let best=null,bestT=null;
+  for(let i=0;i<u.length;i++){
+    const rot=[...u.slice(i),...u.slice(0,i)],t=rot.map(p=>(p-rot[0]+12)%12);
+    if(!best||cmpA(t,bestT)<0){best=rot;bestT=t;}
+  }
+  return bestT;
+}
+function cmpA(a,b){for(let i=a.length-1;i>=0;i--){if(a[i]<b[i])return-1;if(a[i]>b[i])return 1;}return 0;}
+function pcsToSetClass(pcs){const no=normalOrder(pcs),inv=normalOrder(no.map(p=>(12-p)%12));return'['+(cmpA(no,inv)<=0?no:inv).join(',')+']';}
+function getRhythm(){const c=document.querySelector('input[name=notelen]:checked');return c?c.value:'1/8';}
+function getGPB(){return parseInt(document.getElementById('gpbInput').value)||2;}
+
+// ─── STATE ───
+let state={
+  intervals:[3,5,3], root:0,
+  shapes:[
+    {name:'A', intervals:'13, 1, -15'},
+    {name:'B', intervals:'13, -11, 13'},
+    {name:'C', intervals:'13, 1, 13'},
+    {name:'D', intervals:'13, 1, -16'},
+    {name:'E', intervals:'15, -15, 15'},
+  ],
+  voicing:'raw', regCenter:54, tempo:264,
+  // Path table: each row = one gesture (or repeated via reps)
+  // {cycleIdx, shapeIdx, reps}
+  path:[
+    {cycleIdx:8, shapeIdx:0, reps:3},
+    {cycleIdx:4, shapeIdx:0, reps:1},
+    {cycleIdx:0, shapeIdx:1, reps:1},
+    {cycleIdx:14,shapeIdx:3, reps:1},
+    {cycleIdx:0, shapeIdx:2, reps:1},
+    {cycleIdx:14,shapeIdx:3, reps:1},
+  ],
+  cycle:null, showTheory:false,
+  _gestures:[], _midi:[]
+};
+let audioCtx=null,playTimer=null,isPlaying=false,regenTO=null;
+
+// ─── SHAPES ───
+function getShapeAlts(idx){return idx>=0&&idx<state.shapes.length?parseAlt(state.shapes[idx].intervals):[];}
+function buildShapes(){
+  const c=document.getElementById('shapesContainer');c.innerHTML='';
+  state.shapes.forEach((sh,i)=>{
+    const card=document.createElement('div');card.className='shape-card';
+    const alts=parseAlt(sh.intervals);
+    card.innerHTML=`<div class="shape-hdr">
+      <span class="shape-name">${sh.name} <span style="color:var(--dim);font-weight:400">#${i}</span></span>
+      <span style="display:flex;gap:4px">${state.shapes.length>1?`<button class="shape-del" onclick="removeShape(${i})">x</button>`:''}</span>
+    </div>
+    <input type="text" value="${sh.intervals}" data-idx="${i}" oninput="onShapeChange(this)" style="width:100%;font-size:10px;padding:3px 5px" placeholder="e.g. 13, 1, -15">
+    <div class="shape-info">${alts.length?alts.length+1+' notes, ['+alts.join(', ')+']':'no intervals'}</div>`;
+    c.appendChild(card);
+  });
+}
+function onShapeChange(el){
+  const i=parseInt(el.dataset.idx);
+  state.shapes[i].intervals=el.value;
+  buildShapes();buildPathTable();scheduleRegen();
+}
+function addShape(){
+  const names='ABCDEFGHIJKLMNOP';
+  state.shapes.push({name:names[state.shapes.length]||'S'+state.shapes.length,intervals:'13, 1, -15'});
+  buildShapes();buildPathTable();scheduleRegen();
+}
+function removeShape(i){state.shapes.splice(i,1);buildShapes();buildPathTable();scheduleRegen();}
+
+// ─── DERIVE SHAPES FROM CYCLE ───
+function deriveShapes(){
+  const panel=document.getElementById('derivePanel');
+  const results=document.getElementById('deriveResults');
+  panel.style.display='block';
+
+  // Always regenerate cycle from current intervals before deriving
+  state.cycle=genCycle(state.root,state.intervals);
+
+  if(!state.cycle){results.innerHTML='<span style="color:var(--red)">No valid cycle</span>';return;}
+
+  try { _deriveShapesInner(results); }
+  catch(e){ results.innerHTML='<span style="color:var(--red)">Error: '+e.message+'</span>'; console.error(e); }
+}
+function _deriveShapesInner(results){
+
+  const generators=state.intervals;
+  const n=generators.length;
+  const sum=generators.reduce((a,b)=>a+b,0);
+  const sumMod=((sum%12)+12)%12;
+  const invStep=(12-sumMod)%12; // PC motion per full period
+  const cycle=state.cycle;
+  const cycleLen=cycle.length;
+
+  let html=`<div style="color:var(--text);margin-bottom:4px">
+    Period = ${sum} semitones = ${sumMod>6?'&minus;'+(12-sumMod):'+'+sumMod} mod 12
+    <span style="color:var(--dim)">| ${n} positions/period | inverse step = ${invStep}</span>
+  </div>`;
+
+  // For each spacing, find the distinct PC set classes
+  for(let spacing=1;spacing<=n;spacing++){
+    // What PC-interval does this spacing produce?
+    // Collect all distinct intervals across the cycle
+    const pcSteps=new Set();
+    for(let i=0;i<cycleLen;i++){
+      const iv=((cycle[(i+spacing)%cycleLen]-cycle[i])%12+12)%12;
+      pcSteps.add(iv);
+    }
+    const stepArr=[...pcSteps].sort((a,b)=>a-b);
+
+    // What set classes arise from 3-note and 4-note groups at this spacing?
+    const scSets={};
+    for(let card=3;card<=Math.min(5,12);card++){
+      const scs=new Set();
+      for(let i=0;i<cycleLen;i++){
+        const pcs=[];
+        for(let j=0;j<card;j++) pcs.push(cycle[(i+j*spacing)%cycleLen]);
+        scs.add(pcsToSetClass(pcs));
+      }
+      scSets[card]=[...scs];
+    }
+
+    html+=`<div style="color:var(--amber);margin-top:8px;font-weight:500">
+      Spacing ${spacing} <span style="color:var(--dim);font-weight:400">
+      (${spacing===n?'full period = '+sumMod+' mod12':spacing===1?'adjacent = generators':'compound'})</span>
+    </div>`;
+    html+=`<div style="color:var(--dim);padding:1px 0">PC steps: {${stepArr.map(s=>s>6?'&minus;'+(12-s):'+'+s).join(', ')}}</div>`;
+
+    for(const card of [3,4,5]){
+      if(!scSets[card]||!scSets[card].length)continue;
+      html+=`<div style="padding:1px 0"><span style="color:var(--dim)">${card}-note:</span> <span style="color:var(--blue)">${scSets[card].join(' ')}</span></div>`;
+    }
+
+    // Offer registral templates for 4-note gestures
+    // Build the mod12 interval sequences at this spacing for 4 notes
+    const ivSeqs=new Set();
+    for(let i=0;i<cycleLen;i++){
+      const ivs=[];
+      for(let j=0;j<3;j++){
+        ivs.push(((cycle[(i+(j+1)*spacing)%cycleLen]-cycle[(i+j*spacing)%cycleLen])%12+12)%12);
+      }
+      ivSeqs.add(ivs.join(','));
+    }
+
+    for(const seqStr of ivSeqs){
+      const modIvs=seqStr.split(',').map(Number);
+      // mod12 intervals: e.g. [3,5,3] or [11,11,11]
+      // Convert to signed: intervals > 6 are treated as negative (descending)
+      const signed=modIvs.map(v=>v>6?v-12:v); // e.g. 11→-1, 3→3
+
+      // Also compute the INVERSE intervals (12-v mod12 for each)
+      // Bartók uses the inverse: cycle traversal is -1 per step, gesture is +1 with octave leap
+      const invIvs=modIvs.map(v=>(12-v)%12);
+
+      // For each direction (original and inverse), generate registral templates
+      const allSets=[
+        {label:'fwd', ivs:modIvs},
+        {label:'inv', ivs:invIvs}
+      ];
+
+      // Skip inverse if it's the same as forward (e.g. [6,6,6])
+      const fwdKey=modIvs.join(','), invKey=invIvs.join(',');
+      if(fwdKey===invKey) allSets.pop();
+
+      for(const dir of allSets){
+        const mi=dir.ivs;
+        const si=mi.map(v=>v>6?v-12:v); // signed shortest-path
+        const templates=[];
+
+        // Close: compact, no octave displacement
+        templates.push({name:'close', ivs:[...si]});
+
+        // Leap: first note jumps up an octave, rest compact
+        templates.push({name:'leap', ivs:[si[0]+12,...si.slice(1)]});
+
+        // Bartók wedge: first leaps up, middle stays compact,
+        // last drops back to ~1 semitone below start.
+        // Compute: first = si[0]+12, middle = si[1..n-2], last closes the gap
+        {
+          const first=si[0]+12;
+          const mid=si.slice(1,-1);
+          const midSum=mid.reduce((a,b)=>a+b,0);
+          const last=-(first+midSum+1); // sum = -1
+          templates.push({name:'bartok', ivs:[first,...mid,last]});
+        }
+
+        // Contrary: zigzag up/down
+        templates.push({name:'contrary', ivs:si.map((v,i)=>i%2===0?v+12:v-12)});
+
+        const dirLabel=dir.label==='inv'?' <span style="color:var(--green)">inv</span>':'';
+        html+=`<div style="margin-top:3px;padding:2px 0;border-top:1px solid var(--border)">`;
+        html+=`<span style="color:var(--dim)">[${mi.join(',')}]${dirLabel}</span><br>`;
+        for(const t of templates){
+          const ivStr=t.ivs.join(', ');
+          // compute range
+          const pts=[0];let c=0;
+          t.ivs.forEach(v=>{c+=v;pts.push(c);});
+          const range=Math.max(...pts)-Math.min(...pts);
+          const rangeColor=range<=15?'var(--green)':range<=20?'var(--amber)':'var(--red)';
+          html+=`<button class="pchip" style="font-size:8px;padding:1px 5px;margin:1px" onclick="addDerivedShape('${ivStr}')">${t.name} [${t.ivs.join(',')}] <span style="color:${rangeColor}">${range}st</span></button> `;
+        }
+        html+=`</div>`;
+      }
+
+    }
+  }
+
+  results.innerHTML=html;
+}
+
+function addDerivedShape(intervals){
+  const names='ABCDEFGHIJKLMNOP';
+  const idx=state.shapes.length;
+  state.shapes.push({name:(names[idx]||'S'+idx),intervals});
+  buildShapes();buildPathTable();scheduleRegen();
+}
+
+// ─── PATH TABLE ───
+function buildPathTable(){
+  const c=document.getElementById('pathTable');c.innerHTML='';
+  const cycle=state.cycle;
+  let gestN=0;
+  state.path.forEach((row,i)=>{
+    const pc=cycle?cycle[((row.cycleIdx%cycle.length)+cycle.length)%cycle.length]:null;
+    const pcLabel=pc!==null?pcName(pc):'?';
+    // Build shape select
+    let shOpts=state.shapes.map((sh,si)=>`<option value="${si}"${si===row.shapeIdx?' selected':''}>${sh.name}</option>`).join('');
+    const el=document.createElement('div');el.className='pt-row';
+    gestN+=row.reps;
+    el.innerHTML=`
+      <span class="pt-n">${i}</span>
+      <span class="pt-pc">${pcLabel}</span>
+      <span class="pt-lbl">idx</span><input type="number" value="${row.cycleIdx}" min="0" max="99" data-i="${i}" data-f="cycleIdx" oninput="onPathEdit(this)">
+      <span class="pt-lbl">shp</span><select data-i="${i}" data-f="shapeIdx" onchange="onPathEdit(this)">${shOpts}</select>
+      <span class="pt-lbl">x</span><input type="number" value="${row.reps}" min="1" max="16" data-i="${i}" data-f="reps" oninput="onPathEdit(this)" style="width:28px">
+      <button class="pt-dup" onclick="dupPathRow(${i})" title="Duplicate">+</button>
+      ${state.path.length>1?`<button class="pt-del" onclick="delPathRow(${i})" title="Delete">x</button>`:''}`;
+    c.appendChild(el);
+  });
+  document.getElementById('pathCount').textContent=gestN+' gestures';
+}
+function onPathEdit(el){
+  const i=parseInt(el.dataset.i),f=el.dataset.f;
+  state.path[i][f]=parseInt(el.value)||0;
+  if(f==='reps'&&state.path[i].reps<1)state.path[i].reps=1;
+  buildPathTable();scheduleRegen();
+}
+function addPathRow(){
+  const last=state.path.length?state.path[state.path.length-1]:null;
+  const step=parseInt(document.getElementById('afStep').value)||0;
+  state.path.push({cycleIdx:last?last.cycleIdx+step:0,shapeIdx:0,reps:1});
+  buildPathTable();scheduleRegen();
+}
+function dupPathRow(i){
+  state.path.splice(i+1,0,{...state.path[i]});
+  buildPathTable();scheduleRegen();
+}
+function delPathRow(i){
+  state.path.splice(i,1);
+  buildPathTable();scheduleRegen();
+}
+function autoFillPath(){
+  const start=parseInt(document.getElementById('afStart').value)||0;
+  const step=parseInt(document.getElementById('afStep').value)||0;
+  const count=parseInt(document.getElementById('afCount').value)||8;
+  state.path=[];
+  for(let i=0;i<count;i++){
+    state.path.push({cycleIdx:start+i*step, shapeIdx:0, reps:1});
+  }
+  buildPathTable();scheduleRegen();
+}
+
+// ─── INTERVAL EDITOR ───
+function buildIVWrap(){
+  const wrap=document.getElementById('ivWrap');wrap.innerHTML='';
+  state.intervals.forEach((v,i)=>{
+    if(i>0){const sep=document.createElement('span');sep.className='iv-sep';sep.textContent=',';wrap.appendChild(sep);}
+    const inp=document.createElement('input');
+    inp.type='number';inp.className='iv-inp';inp.value=v;inp.min=1;inp.max=23;
+    inp.oninput=e=>{state.intervals[i]=parseInt(e.target.value)||1;updateIVSum();scheduleRegen();};
+    wrap.appendChild(inp);
+  });
+  const add=document.createElement('button');add.className='iconbtn add';add.textContent='+';
+  add.onclick=()=>{state.intervals.push(3);buildIVWrap();updateIVSum();scheduleRegen();};
+  wrap.appendChild(add);
+  if(state.intervals.length>1){
+    const del=document.createElement('button');del.className='iconbtn del';del.textContent='-';
+    del.onclick=()=>{state.intervals.pop();buildIVWrap();updateIVSum();scheduleRegen();};
+    wrap.appendChild(del);
+  }
+  updateIVSum();
+}
+function updateIVSum(){
+  const sum=state.intervals.reduce((a,b)=>a+b,0);
+  const ms=((sum%12)+12)%12;
+  document.getElementById('ivSum').textContent=`sum mod12 = ${ms}`;
+  const w=document.getElementById('ivWarn');
+  if(!coprime(ms,12)){w.style.display='block';w.textContent=`mod12 sum = ${ms} — not coprime with 12.`;}
+  else w.style.display='none';
+}
+function loadPreset(ivs){state.intervals=[...ivs];buildIVWrap();scheduleRegen();}
+
+// ─── CONTROLS ───
+function onRootChange(v){state.root=parseInt(v);document.getElementById('rootVal').textContent=`${v} = ${pcName(v)}`;scheduleRegen();}
+function onRegChange(v){state.regCenter=parseInt(v);document.getElementById('regVal').textContent=midiToDisplay(parseInt(v));scheduleRegen();}
+function onTempoChange(v){state.tempo=parseInt(v);document.getElementById('tempoVal').textContent=v;}
+function toggleTheory(){
+  state.showTheory=!state.showTheory;
+  document.getElementById('theoryPanel').classList.toggle('hidden',!state.showTheory);
+  document.getElementById('theoryToggle').classList.toggle('on',state.showTheory);
+}
+function scheduleRegen(){clearTimeout(regenTO);regenTO=setTimeout(generate,250);}
+
+// ─── MAIN GENERATION ───
+function generate(){
+  state.voicing=document.getElementById('voicingPreset').value;
+  const cycle=genCycle(state.root,state.intervals);
+  state.cycle=cycle;
+
+  if(!cycle){
+    setStatus('err','Invalid cycle');
+    document.getElementById('cycleInfo').textContent='—';
+    drawClock(null,new Set(),new Set());renderGestures([]);buildPathTable();return;
+  }
+
+  // Theory
+  const dv=getDistVec(cycle), safe=Math.min(...dv);
+  const modSum=((state.intervals.reduce((a,b)=>a+b,0)%12)+12)%12;
+  document.getElementById('tLen').textContent=cycle.length;
+  document.getElementById('tCoprime').textContent=coprime(modSum,12)?'yes':'no';
+  document.getElementById('tDist').textContent='<'+dv.join(',')+' >';
+  document.getElementById('tSafe').textContent=safe;
+  const dev=dv.reduce((a,b)=>a+Math.abs(b-12),0);
+  document.getElementById('tType').textContent=dev===2?'maximally distributed':dev===4?'near-maximally distributed':'custom';
+  document.getElementById('cycleInfo').textContent=`(${state.intervals.join(',')}) root ${pcName(state.root)} len ${cycle.length}`;
+
+  buildPathTable();
+
+  // Generate gestures from path table
+  const cycleLen=cycle.length;
+  const voicing=state.voicing;
+  const gestures=[];
+  let prevMidi=state.regCenter;
+
+  for(const row of state.path){
+    const alts=getShapeAlts(row.shapeIdx);
+    if(!alts.length)continue;
+    const pc=cycle[((row.cycleIdx%cycleLen)+cycleLen)%cycleLen];
+    const startMidi=findClosestMidi(pc,prevMidi);
+    if(startMidi===null)continue;
+    const raw=gestureFromMidi(startMidi,alts);
+    const valid=!raw.some(n=>n<21||n>108)&&validateGesture(raw,cycle);
+    const voiced=voicing==='raw'?raw:applyVoicing(raw,voicing);
+    for(let r=0;r<(row.reps||1);r++){
+      gestures.push({
+        raw, voiced, pcs:raw.map(n=>((n%12)+12)%12),
+        startMidi, cycleIdx:((row.cycleIdx%cycleLen)+cycleLen)%cycleLen,
+        shapeIdx:row.shapeIdx, valid
+      });
+    }
+    prevMidi=startMidi;
+  }
+
+  const valid=gestures.filter(g=>g.valid);
+  state._gestures=valid;
+  state._midi=valid.flatMap(g=>g.voiced);
+
+  document.getElementById('resCount').textContent=valid.length;
+  const ok=valid.length>0;
+  setStatus(ok?'ok':'err',ok?valid.length+' gestures':'no matches');
+
+  const gPcs=valid.length?new Set(valid[0].pcs):new Set();
+  drawClock(cycle,new Set(cycle),gPcs);
+  renderGestures(valid);
+  buildOMN(valid);
+  document.getElementById('cycleOut').textContent=cycle.slice(0,cycle.length/state.intervals.length).map(pc=>pcName(pc)).join(' ');
+
+  // Auto-refresh derive panel if it's open
+  if(document.getElementById('derivePanel').style.display!=='none') deriveShapes();
+}
+
+function setStatus(type,text){const el=document.getElementById('statusLbl');el.className='status-lbl '+type;el.textContent=text;}
+
+// ─── OMN OUTPUT ───
+function buildOMN(gestures){
+  if(!gestures.length){document.getElementById('omnOut').textContent='—';return;}
+  const noteLen=getRhythm(), gpb=getGPB();
+  // Group gestures into bars, handling variable-size gestures
+  const bars=[];
+  for(let i=0;i<gestures.length;i+=gpb){
+    const bg=gestures.slice(i,i+gpb);
+    // Each gesture may have a different number of notes
+    const pitches=bg.flatMap(g=>g.voiced.map(m=>midiToOMN(m)));
+    bars.push(pitches.join(' '));
+  }
+  document.getElementById('omnOut').textContent="'(\n"+bars.map(b=>`(${noteLen} ${b})`).join('\n')+"\n)";
+}
+function copyOMN(){navigator.clipboard.writeText(document.getElementById('omnOut').textContent).catch(()=>{});}
+
+// ─── MUSICXML ───
+function midiToXMLPitch(midi){
+  const steps=['C','D','D','E','E','F','F','G','A','A','B','B'];
+  const alters=[0,-1,0,-1,0,0,1,0,-1,0,-1,0];
+  const pc=((midi%12)+12)%12;
+  return{step:steps[pc],alter:alters[pc],octave:Math.floor(midi/12)-1};
+}
+function exportMusicXML(){
+  if(!state._gestures.length)return;
+  const noteLen=getRhythm(), gpb=getGPB();
+  const divisions=4;
+  const durMap={'1/16':1,'1/8':2,'1/4':4};
+  const typMap={'1/16':'16th','1/8':'eighth','1/4':'quarter'};
+  const noteDur=durMap[noteLen]||2, noteType=typMap[noteLen]||'eighth';
+  // Group into bars, keeping gesture boundaries for beaming
+  const barData=[];
+  for(let i=0;i<state._gestures.length;i+=gpb){
+    const barGestures=state._gestures.slice(i,i+gpb);
+    barData.push(barGestures);
+  }
+  // Time signature from first bar's total notes
+  const firstBarNotes=barData[0]?barData[0].reduce((s,g)=>s+g.voiced.length,0):4;
+  const totalDiv=firstBarNotes*noteDur;
+  let beats,beatType;
+  if(totalDiv%4===0){beats=totalDiv/4;beatType=4;}
+  else if(totalDiv%2===0){beats=totalDiv/2;beatType=8;}
+  else{beats=totalDiv;beatType=16;}
+  if(beats===4&&beatType===4){beats=2;beatType=2;}
+  const mXML=barData.map((barGestures,i)=>{
+    // Build notes with per-gesture beaming
+    let noteIdx=0;
+    const ns=barGestures.map(g=>{
+      const gestSz=g.voiced.length;
+      return g.voiced.map((m,gi)=>{
+        const p=midiToXMLPitch(m);
+        const altStr=p.alter!==0?`\n          <alter>${p.alter}</alter>`:'';
+        let beam='';
+        if(noteType!=='quarter'&&gestSz>1){
+          if(gi===0)beam='\n        <beam number="1">begin</beam>';
+          else if(gi===gestSz-1)beam='\n        <beam number="1">end</beam>';
+          else beam='\n        <beam number="1">continue</beam>';
+        }
+        noteIdx++;
+        return`      <note>\n        <pitch>\n          <step>${p.step}</step>${altStr}\n          <octave>${p.octave}</octave>\n        </pitch>\n        <duration>${noteDur}</duration>\n        <type>${noteType}</type>${beam}\n      </note>`;
+      }).join('\n');
+    }).join('\n');
+    // Check if this bar has different note count — may need time signature change
+    const barNotes=barGestures.reduce((s,g)=>s+g.voiced.length,0);
+    const barDiv=barNotes*noteDur;
+    let barBeats,barBeatType;
+    if(barDiv%4===0){barBeats=barDiv/4;barBeatType=4;}
+    else if(barDiv%2===0){barBeats=barDiv/2;barBeatType=8;}
+    else{barBeats=barDiv;barBeatType=16;}
+    if(barBeats===4&&barBeatType===4){barBeats=2;barBeatType=2;}
+    const needTimeSigChange=i>0&&(barBeats!==beats||barBeatType!==beatType);
+    let attrs='';
+    if(i===0){
+      attrs=`\n      <attributes>\n        <divisions>${divisions}</divisions>\n        <key><fifths>0</fifths></key>\n        <time><beats>${beats}</beats><beat-type>${beatType}</beat-type></time>\n        <clef><sign>G</sign><line>2</line></clef>\n      </attributes>\n      <direction placement="above">\n        <direction-type>\n          <metronome><beat-unit>quarter</beat-unit><per-minute>${state.tempo}</per-minute></metronome>\n        </direction-type>\n      </direction>`;
+    } else if(needTimeSigChange){
+      attrs=`\n      <attributes>\n        <time><beats>${barBeats}</beats><beat-type>${barBeatType}</beat-type></time>\n      </attributes>`;
+    }
+    return`    <measure number="${i+1}">${attrs}\n${ns}\n    </measure>`;
+  }).join('\n');
+  const xml=`<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">\n<score-partwise version="4.0">\n  <work><work-title>Gollin Cycle Study</work-title></work>\n  <part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list>\n  <part id="P1">\n${mXML}\n  </part>\n</score-partwise>`;
+  const blob=new Blob([xml],{type:'application/xml'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gollin-study.xml';a.click();
+}
+
+// ─── CLOCK ───
+function drawClock(cycle,cycleSet,gesturePcs){
+  const svg=document.getElementById('clockSvg');svg.innerHTML='';
+  const cx=105,cy=105,R=90,r=10;
+  if(cycle){
+    const show=Math.min(cycle.length,36);
+    for(let i=0;i<show-1;i++){
+      const a1=(cycle[i]/12)*2*Math.PI-Math.PI/2,a2=(cycle[i+1]/12)*2*Math.PI-Math.PI/2;
+      const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+      l.setAttribute('x1',cx+(R-13)*Math.cos(a1));l.setAttribute('y1',cy+(R-13)*Math.sin(a1));
+      l.setAttribute('x2',cx+(R-13)*Math.cos(a2));l.setAttribute('y2',cy+(R-13)*Math.sin(a2));
+      l.setAttribute('stroke','#202030');l.setAttribute('stroke-width','1');svg.appendChild(l);
+    }
+  }
+  for(let pc=0;pc<12;pc++){
+    const angle=(pc/12)*2*Math.PI-Math.PI/2;
+    const x=cx+R*Math.cos(angle),y=cy+R*Math.sin(angle);
+    const inC=cycleSet&&cycleSet.has(pc),inG=gesturePcs&&gesturePcs.has(pc);
+    let fill='#14141e',stroke='#1e1e30',sw=1,tc='#303045';
+    if(inC&&inG){fill='#0a1e2a';stroke='#5090b0';sw=2;tc='#7ab0c8';}
+    else if(inG){fill='#0a1e0f';stroke='#508060';sw=2;tc='#70c880';}
+    else if(inC){fill='#1e1500';stroke='#806020';sw=1.5;tc='#c09040';}
+    const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx',x);circle.setAttribute('cy',y);circle.setAttribute('r',r);
+    circle.setAttribute('fill',fill);circle.setAttribute('stroke',stroke);circle.setAttribute('stroke-width',sw);
+    circle.style.cursor='pointer';
+    circle.addEventListener('click',()=>auditionPC(pc));svg.appendChild(circle);
+    const txt=document.createElementNS('http://www.w3.org/2000/svg','text');
+    txt.setAttribute('x',x);txt.setAttribute('y',y+4);txt.setAttribute('text-anchor','middle');
+    txt.setAttribute('font-family','IBM Plex Mono,monospace');txt.setAttribute('font-size','8');
+    txt.setAttribute('font-weight',inC||inG?'500':'300');txt.setAttribute('fill',tc);
+    txt.textContent=pcName(pc);svg.appendChild(txt);
+  }
+  const lbl=document.createElementNS('http://www.w3.org/2000/svg','text');
+  lbl.setAttribute('x',cx);lbl.setAttribute('y',cy+4);lbl.setAttribute('text-anchor','middle');
+  lbl.setAttribute('font-family','IBM Plex Mono,monospace');lbl.setAttribute('font-size','9');
+  lbl.setAttribute('fill','#303048');
+  lbl.textContent=state.cycle?`(${state.intervals.join(',')}) ${pcName(state.root)}`:'';svg.appendChild(lbl);
+}
+
+// ─── GESTURE LIST ───
+function renderGestures(gestures){
+  const list=document.getElementById('gestureList');
+  if(!gestures.length){list.innerHTML='<div class="no-results">No gestures. Add path rows and Generate.</div>';return;}
+  list.innerHTML='';
+  const gpb=getGPB();
+  gestures.forEach((g,i)=>{
+    const card=document.createElement('div');card.className='gcard';card.dataset.idx=i;
+    const pStr=g.voiced.map(m=>midiToDisplay(m)).join(' ');
+    const barNum=Math.floor(i/gpb)+1;
+    const shName=state.shapes[g.shapeIdx]?state.shapes[g.shapeIdx].name:'?';
+    card.innerHTML=`<span class="gcard-idx">${i+1}</span>
+      <span style="flex:1">
+        <div class="gcard-pitches">${pStr}</div>
+        <div class="gcard-pcs"><span style="color:var(--blue)">m${barNum}</span> <span style="color:var(--purple)">${shName}</span> cyc[${g.cycleIdx}]${g.valid?'':' <span style="color:var(--red)">invalid</span>'}</div>
+      </span>
+      <button class="gcard-play" onclick="event.stopPropagation();playGesture(${i})">&#9654;</button>`;
+    card.addEventListener('click',()=>{
+      document.querySelectorAll('.gcard').forEach(c=>c.classList.remove('highlighted'));
+      card.classList.add('highlighted');
+      drawClock(state.cycle,new Set(state.cycle||[]),new Set(g.pcs));
+      playGesture(i);
+    });
+    list.appendChild(card);
+  });
+}
+
+// ─── AUDIO ───
+function getCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+function freq(m){return 440*Math.pow(2,(m-69)/12);}
+function playNote(midi,t,dur,vel=0.5){
+  const ctx=getCtx(),f=freq(midi);
+  const car=ctx.createOscillator(),mod=ctx.createOscillator(),mg=ctx.createGain(),env=ctx.createGain();
+  mod.frequency.value=f*2;mg.gain.setValueAtTime(f*1.2,t);mg.gain.exponentialRampToValueAtTime(f*0.05,t+0.1);
+  car.type='triangle';car.frequency.value=f;
+  mod.connect(mg);mg.connect(car.frequency);car.connect(env);env.connect(ctx.destination);
+  env.gain.setValueAtTime(0,t);env.gain.linearRampToValueAtTime(vel*0.3,t+0.008);
+  env.gain.exponentialRampToValueAtTime(vel*0.12,t+0.15);env.gain.exponentialRampToValueAtTime(0.0001,t+dur+0.4);
+  car.start(t);mod.start(t);car.stop(t+dur+0.6);mod.stop(t+dur+0.6);
+}
+function noteDurSec(){const nl=getRhythm(),spb=60/state.tempo;return spb*(nl==='1/4'?1:nl==='1/8'?0.5:0.25);}
+function playGesture(idx){
+  const g=state._gestures[idx];if(!g)return;stopAll();
+  const ctx=getCtx(),nd=noteDurSec(),now=ctx.currentTime+0.02;
+  document.querySelectorAll('.gcard').forEach(c=>c.classList.remove('playing'));
+  const card=document.querySelector(`.gcard[data-idx="${idx}"]`);
+  if(card){card.classList.add('playing');setTimeout(()=>card.classList.remove('playing'),g.voiced.length*nd*1000+400);}
+  g.voiced.forEach((m,i)=>playNote(m,now+i*nd,nd*0.88));
+}
+function auditionPC(pc){
+  const ctx=getCtx();let m=state.regCenter-((state.regCenter%12)-pc);
+  if(m<36)m+=12;if(m>100)m-=12;playNote(m,ctx.currentTime+0.02,0.6);
+}
+function playAll(){
+  if(isPlaying){stopAll();return;}
+  stopAll();isPlaying=true;
+  document.getElementById('playBtn').classList.add('playing');document.getElementById('playBtn').textContent='Playing...';
+  const ctx=getCtx(),nd=noteDurSec(),allM=state._midi;
+  if(!allM.length){stopAll();return;}
+  const now=ctx.currentTime+0.05;
+  allM.forEach((m,i)=>playNote(m,now+i*nd,nd*0.85,0.5));
+  playTimer=setTimeout(()=>{isPlaying=false;resetPlayBtn();},allM.length*nd*1000+800);
+}
+function stopAll(){
+  if(playTimer){clearTimeout(playTimer);playTimer=null;}
+  isPlaying=false;resetPlayBtn();
+  document.querySelectorAll('.gcard').forEach(c=>c.classList.remove('playing'));
+}
+function resetPlayBtn(){document.getElementById('playBtn').classList.remove('playing');document.getElementById('playBtn').textContent='Play All';}
+
+// ─── BARTOK PRESETS ───
+function loadBartok(variant){
+  state.intervals=[3,5,3];buildIVWrap();
+  state.root=0;document.getElementById('rootSlider').value=0;document.getElementById('rootVal').textContent='0 = C';
+  state.shapes=[
+    {name:'A', intervals:'13, 1, -15'},
+    {name:'B', intervals:'13, -11, 13'},
+    {name:'C', intervals:'13, 1, 13'},
+    {name:'D', intervals:'13, 1, -16'},
+    {name:'E', intervals:'15, -15, 15'},
+  ];
+  buildShapes();
+  state.voicing='raw';document.getElementById('voicingPreset').value='raw';
+  state.regCenter=54;document.getElementById('regSlider').value=54;document.getElementById('regVal').textContent='F#3';
+  document.querySelector('input[name=notelen][value="1/8"]').checked=true;
+  state.tempo=264;document.getElementById('tempoSlider').value=264;document.getElementById('tempoVal').textContent='264';
+  document.getElementById('gpbInput').value=2;
+
+  if(variant==='m1-4'){
+    // M1: A@F#(8) x3, M2: A@D(4) x1, M3: B@C(0)+D@E(14), M4: C@C(0)+D@E(14)
+    state.path=[
+      {cycleIdx:8,  shapeIdx:0, reps:3},  // M1g1, M1g2, M2g1
+      {cycleIdx:4,  shapeIdx:0, reps:1},  // M2g2
+      {cycleIdx:0,  shapeIdx:1, reps:1},  // M3g1
+      {cycleIdx:14, shapeIdx:3, reps:1},  // M3g2
+      {cycleIdx:0,  shapeIdx:2, reps:1},  // M4g1
+      {cycleIdx:14, shapeIdx:3, reps:1},  // M4g2
+    ];
+    document.getElementById('afStart').value=8;
+    document.getElementById('afStep').value=-4;
+    document.getElementById('afCount').value=8;
+  } else if(variant==='m5-8'){
+    // M5: A@B(3) x3, M6.1: variant, M6.2: variant, M7-8: E@Ab(2) x4
+    state.path=[
+      {cycleIdx:3,  shapeIdx:0, reps:3},  // M5g1, M5g2, M6g1-ish
+      {cycleIdx:11, shapeIdx:3, reps:1},  // M6g2-ish
+      {cycleIdx:2,  shapeIdx:4, reps:4},  // M7-M8: Ab-B dyad oscillation
+    ];
+    state.regCenter=59;document.getElementById('regSlider').value=59;document.getElementById('regVal').textContent='B3';
+  } else if(variant==='m1-8'){
+    state.path=[
+      {cycleIdx:8,  shapeIdx:0, reps:3},
+      {cycleIdx:4,  shapeIdx:0, reps:1},
+      {cycleIdx:0,  shapeIdx:1, reps:1},
+      {cycleIdx:14, shapeIdx:3, reps:1},
+      {cycleIdx:0,  shapeIdx:2, reps:1},
+      {cycleIdx:14, shapeIdx:3, reps:1},
+      {cycleIdx:3,  shapeIdx:0, reps:3},
+      {cycleIdx:11, shapeIdx:3, reps:1},
+      {cycleIdx:2,  shapeIdx:4, reps:4},
+    ];
+    document.getElementById('afStart').value=8;
+    document.getElementById('afStep').value=-4;
+    document.getElementById('afCount').value=16;
+  }
+
+  const info=document.getElementById('presetInfo');
+  info.style.display='block';info.textContent=`Bartok Op.18/1 ${variant} loaded`;
+  generate();
+}
+
+// ─── INIT ───
+(function(){
+  buildIVWrap();buildShapes();
+  document.getElementById('regSlider').value=54;
+  document.getElementById('tempoSlider').value=264;
+  onRootChange(0);onRegChange(54);onTempoChange(264);
+  generate();
+})();
+</script>
+</body>
+</html>
